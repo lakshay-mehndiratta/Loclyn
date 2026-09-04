@@ -2,7 +2,7 @@
   "name": "@loclyn/dashboard",
   "version": "0.1.0",
   "type": "module",
-  "main": "dist/server/dashboard-server.js",
+  "main": "dist/server/index.js",
   "scripts": {
     "build": "tsc -p tsconfig.json"
   },
