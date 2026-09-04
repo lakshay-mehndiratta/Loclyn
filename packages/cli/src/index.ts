@@ -8,8 +8,10 @@ import {
   DiagnosticsEngine,
   type ServiceConfig,
 } from "@loclyn/core";
+import { DashboardServer } from "@loclyn/dashboard";
 
 const PROXY_PORT = 4020;
+const DASHBOARD_PORT = 4021;
 
 const program = new Command();
 
@@ -43,6 +45,9 @@ async function main(): Promise<void> {
   const proxy = new LoclynProxy(router, bus);
   new DiagnosticsEngine(bus);
 
+  const dashboard = new DashboardServer(bus);
+  await dashboard.listen(DASHBOARD_PORT);
+
   bus.on((event) => {
     if (event.type === "service:updated") {
       const s = event.payload;
@@ -66,12 +71,22 @@ async function main(): Promise<void> {
 
   console.log("");
   console.log(`Proxy running at http://localhost:${PROXY_PORT}`);
+  console.log(`Dashboard running at http://localhost:${DASHBOARD_PORT}`);
   console.log("");
   console.log("Press Ctrl+C to stop.");
 
+  let shuttingDown = false;
+
   const shutdown = async () => {
+    if (shuttingDown) return;
+
+    shuttingDown = true;
+
     console.log("\nStopping Loclyn...");
+
     await proxy.close();
+    await dashboard.close();
+
     process.exit(0);
   };
 

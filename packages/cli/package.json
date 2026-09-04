@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@loclyn/core": "0.1.0",
+    "@loclyn/dashboard": "0.1.0",
     "commander": "12.1.0"
   },
   "devDependencies": {
