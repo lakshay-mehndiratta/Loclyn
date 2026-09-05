@@ -3,7 +3,13 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { WebSocketServer, type WebSocket } from "ws";
-import type { LoclynEventBus, LoclynEvent, ServiceState, DiagnosticResult } from "@loclyn/core";
+import type {
+  LoclynEventBus,
+  LoclynEvent,
+  ServiceState,
+  DiagnosticResult,
+  ConnectionState,
+} from "@loclyn/core";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PUBLIC_DIR = path.join(__dirname, "..", "..", "public");
@@ -16,17 +22,15 @@ const MIME_TYPES: Record<string, string> = {
 
 /**
  * DashboardServer is a pure subscriber to the same LoclynEventBus used by
- * the proxy, registry, and diagnostics engine — it does not touch any of
- * them directly.
+ * the proxy, registry, diagnostics engine, and tunnel manager — it does
+ * not touch any of them directly.
  *
- * It keeps a small in-memory snapshot of the LATEST service and diagnostic
- * state it has seen (keyed by name/id), because service:updated and the
- * startup diagnostic:updated events only fire once, at the moment they
- * change — a browser tab that connects afterward would otherwise never
- * see them. request:logged is NOT snapshotted, since it represents a
- * stream of individual past events, not current state — a newly connected
- * tab reasonably starts with an empty request log and just sees new ones
- * as they happen.
+ * It keeps a small in-memory snapshot of the LATEST service, diagnostic,
+ * AND connection state it has seen, because service:updated,
+ * diagnostic:updated, and connection:updated all only fire once, at the
+ * moment they change — a browser tab that connects afterward would
+ * otherwise never see them. request:logged is NOT snapshotted, since it
+ * represents a stream of individual past events, not current state.
  */
 export class DashboardServer {
   private server: http.Server;
@@ -35,9 +39,15 @@ export class DashboardServer {
 
   private latestServices = new Map<string, ServiceState>();
   private latestDiagnostics = new Map<string, DiagnosticResult>();
+  private latestConnection: ConnectionState | null = null;
+  private sockets = new Set<import("node:net").Socket>();
 
   constructor(private bus: LoclynEventBus) {
     this.server = http.createServer((req, res) => this.handleHttp(req, res));
+    this.server.on("connection", (socket) => {
+      this.sockets.add(socket);
+      socket.on("close", () => this.sockets.delete(socket));
+    });
     this.wss = new WebSocketServer({ server: this.server, path: "/ws" });
 
     this.wss.on("connection", (socket) => {
@@ -58,20 +68,26 @@ export class DashboardServer {
     if (event.type === "diagnostic:updated") {
       this.latestDiagnostics.set(event.payload.id + event.payload.detail, event.payload);
     }
+    if (event.type === "connection:updated") {
+      this.latestConnection = event.payload;
+    }
 
     this.broadcast(event);
   }
 
-  /** Sends every currently-known service and diagnostic to one newly
-   * connected client, as normal LoclynEvent messages — the browser side
-   * doesn't need to know this is a "replay," it just looks like a burst
-   * of the same event types it already knows how to handle. */
+  /** Sends every currently-known service, diagnostic, and connection
+   * state to one newly connected client, as normal LoclynEvent messages —
+   * the browser side doesn't need to know this is a "replay," it just
+   * looks like a burst of the same event types it already handles. */
   private sendSnapshot(socket: WebSocket): void {
     for (const service of this.latestServices.values()) {
       this.sendTo(socket, { type: "service:updated", payload: service });
     }
     for (const diagnostic of this.latestDiagnostics.values()) {
       this.sendTo(socket, { type: "diagnostic:updated", payload: diagnostic });
+    }
+    if (this.latestConnection) {
+      this.sendTo(socket, { type: "connection:updated", payload: this.latestConnection });
     }
   }
 
@@ -113,6 +129,14 @@ export class DashboardServer {
 
   close(): Promise<void> {
     return new Promise((resolve) => {
+      // Force-close every open WebSocket client and raw socket first —
+      // http.Server.close() only calls back once ALL connections have
+      // ended naturally, but WebSocket connections stay open by design
+      // (and a browser tab's own connection may still briefly appear
+      // open even just after the tab is closed), so without this the
+      // promise would hang forever.
+      for (const client of this.clients) client.terminate();
+      for (const socket of this.sockets) socket.destroy();
       this.server.close(() => resolve());
     });
   }

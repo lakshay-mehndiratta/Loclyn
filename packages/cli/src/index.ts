@@ -93,18 +93,23 @@ async function main(): Promise<void> {
   console.log("");
   console.log("Press Ctrl+C to stop.");
 
-  let shuttingDown = false;
-
   const shutdown = async () => {
-    if (shuttingDown) return;
-
-    shuttingDown = true;
-
     console.log("\nStopping Loclyn...");
 
+    // Safety net: if graceful shutdown ever hangs for an unforeseen
+    // reason, force-exit after 5 seconds rather than leaving the
+    // terminal stuck forever.
+    const forceExitTimer = setTimeout(() => {
+      console.log("Shutdown taking too long — forcing exit.");
+      process.exit(1);
+    }, 5000);
+    forceExitTimer.unref();
+
+    tunnel.stop();
     await proxy.close();
     await dashboard.close();
 
+    clearTimeout(forceExitTimer);
     process.exit(0);
   };
 

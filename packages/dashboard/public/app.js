@@ -4,10 +4,21 @@ const servicesBody = document.querySelector("#services-table tbody");
 const diagnosticsBody = document.querySelector("#diagnostics-table tbody");
 const requestsBody = document.querySelector("#requests-table tbody");
 
+const deviceUrlEl = document.getElementById("device-url");
+const tunnelStatusEl = document.getElementById("tunnel-status");
+const proxyStatusEl = document.getElementById("proxy-status");
+const sslStatusEl = document.getElementById("ssl-status");
+const uptimeEl = document.getElementById("uptime");
+
 // Keeps one row per service/diagnostic, keyed by name/id, so updates
 // replace the existing row instead of appending duplicates.
 const serviceRows = new Map();
 const diagnosticRows = new Map();
+
+// Remembers the tunnel's startedAt so the uptime display can keep
+// ticking every second between real connection:updated events, which
+// only arrive when something actually changes.
+let tunnelStartedAt = null;
 
 const MAX_REQUEST_ROWS = 20;
 
@@ -38,6 +49,7 @@ function handleEvent(event) {
   if (event.type === "service:updated") renderService(event.payload);
   if (event.type === "diagnostic:updated") renderDiagnostic(event.payload);
   if (event.type === "request:logged") renderRequest(event.payload);
+  if (event.type === "connection:updated") renderConnection(event.payload);
 }
 
 function renderService(service) {
@@ -97,5 +109,37 @@ function renderRequest(entry) {
     requestsBody.removeChild(requestsBody.lastChild);
   }
 }
+
+function statusField(el, status, okValues) {
+  const dotClass = okValues.includes(status) ? "status-ok" : "status-error";
+  el.innerHTML = `<span class="status-dot ${dotClass}"></span> ${status}`;
+}
+
+function renderConnection(connection) {
+  deviceUrlEl.textContent = connection.deviceUrl ?? "Not connected";
+
+  statusField(tunnelStatusEl, connection.tunnel, ["connected"]);
+  statusField(proxyStatusEl, connection.proxy, ["running"]);
+  statusField(sslStatusEl, connection.ssl, ["active"]);
+
+  tunnelStartedAt = connection.startedAt;
+  renderUptime();
+}
+
+function renderUptime() {
+  if (!tunnelStartedAt) {
+    uptimeEl.textContent = "—";
+    return;
+  }
+
+  const elapsedMs = Date.now() - tunnelStartedAt;
+  const totalSeconds = Math.floor(elapsedMs / 1000);
+  const hours = String(Math.floor(totalSeconds / 3600)).padStart(2, "0");
+  const minutes = String(Math.floor((totalSeconds % 3600) / 60)).padStart(2, "0");
+  const seconds = String(totalSeconds % 60).padStart(2, "0");
+  uptimeEl.textContent = `${hours}:${minutes}:${seconds}`;
+}
+
+setInterval(renderUptime, 1000);
 
 connect();

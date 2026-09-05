@@ -77,3 +77,49 @@ th {
   color: #9aa0ac;
   font-weight: 500;
 }
+
+.connection-summary {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 24px;
+  flex-wrap: wrap;
+}
+
+.device-url-block {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+#device-url {
+  font-size: 18px;
+  font-family: "Consolas", monospace;
+  color: #7dd3fc;
+}
+
+.connection-fields {
+  display: flex;
+  gap: 32px;
+  flex-wrap: wrap;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.field-label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #9aa0ac;
+}
+
+.field span:not(.field-label) {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+}

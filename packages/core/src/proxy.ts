@@ -1,5 +1,6 @@
 import http from "node:http";
 import type { Duplex } from "node:stream";
+import type { Socket } from "node:net";
 import { randomUUID } from "node:crypto";
 import httpProxy from "http-proxy";
 import { Router } from "./router.js";
@@ -24,6 +25,7 @@ import type { RequestLogEntry } from "./types.js";
 export class LoclynProxy {
   private server: http.Server;
   private proxy: httpProxy;
+  private sockets = new Set<Socket>();
 
   constructor(
     private router: Router,
@@ -31,6 +33,10 @@ export class LoclynProxy {
   ) {
     this.proxy = httpProxy.createProxyServer({});
     this.server = http.createServer((req, res) => this.handleRequest(req, res));
+    this.server.on("connection", (socket) => {
+      this.sockets.add(socket);
+      socket.on("close", () => this.sockets.delete(socket));
+    });
 
     // Node fires 'upgrade' instead of 'request' when a client is asking to
     // switch this connection to a WebSocket. Without this listener, the
@@ -128,6 +134,10 @@ export class LoclynProxy {
 
   close(): Promise<void> {
     return new Promise((resolve) => {
+      // Same reasoning as DashboardServer.close() — open WebSocket
+      // connections (e.g. HMR) never end on their own, so force-destroy
+      // every open socket before waiting on the server's close callback.
+      for (const socket of this.sockets) socket.destroy();
       this.server.close(() => resolve());
     });
   }

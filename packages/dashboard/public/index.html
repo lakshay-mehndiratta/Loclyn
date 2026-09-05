@@ -13,6 +13,34 @@
   </header>
 
   <main class="grid">
+    <section class="panel panel-wide" id="connection-panel">
+      <h2>Connection</h2>
+      <div class="connection-summary">
+        <div class="device-url-block">
+          <span class="field-label">Device URL</span>
+          <span id="device-url">Not connected</span>
+        </div>
+        <div class="connection-fields">
+          <div class="field">
+            <span class="field-label">Tunnel</span>
+            <span id="tunnel-status"><span class="status-dot status-unknown"></span> —</span>
+          </div>
+          <div class="field">
+            <span class="field-label">Proxy</span>
+            <span id="proxy-status"><span class="status-dot status-unknown"></span> —</span>
+          </div>
+          <div class="field">
+            <span class="field-label">SSL</span>
+            <span id="ssl-status"><span class="status-dot status-unknown"></span> —</span>
+          </div>
+          <div class="field">
+            <span class="field-label">Uptime</span>
+            <span id="uptime">—</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
     <section class="panel">
       <h2>Services</h2>
       <table id="services-table">
