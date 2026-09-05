@@ -117,7 +117,12 @@ export class LoclynProxy {
 
   listen(port: number): Promise<void> {
     return new Promise((resolve) => {
-      this.server.listen(port, () => resolve());
+      // Bind explicitly to the IPv4 loopback address, not "localhost" —
+      // on Windows, "localhost" can resolve to the IPv6 loopback (::1)
+      // depending on Node/DNS config, which can silently mismatch with
+      // what cloudflared tries to connect to. Being explicit here removes
+      // that ambiguity entirely.
+      this.server.listen(port, "127.0.0.1", () => resolve());
     });
   }
 

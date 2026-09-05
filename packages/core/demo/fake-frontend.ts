@@ -27,4 +27,4 @@ wss.on("connection", (socket) => {
   });
 });
 
-server.listen(5173, () => console.log("[demo] fake frontend listening on :5173 (HTTP + WS at /hmr)"));
+server.listen(5173, "127.0.0.1", () => console.log("[demo] fake frontend listening on :5173 (HTTP + WS at /hmr)"));

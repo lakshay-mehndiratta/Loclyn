@@ -5,4 +5,4 @@ const server = http.createServer((req, res) => {
   res.end(JSON.stringify({ message: "Fake Backend (pretend Express)", path: req.url }));
 });
 
-server.listen(3000, () => console.log("[demo] fake backend listening on :3000"));
+server.listen(3000, "127.0.0.1", () => console.log("[demo] fake backend listening on :3000"));

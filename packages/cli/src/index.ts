@@ -6,6 +6,7 @@ import {
   Router,
   LoclynProxy,
   DiagnosticsEngine,
+  TunnelManager,
   type ServiceConfig,
 } from "@loclyn/core";
 import { DashboardServer } from "@loclyn/dashboard";
@@ -48,6 +49,8 @@ async function main(): Promise<void> {
   const dashboard = new DashboardServer(bus);
   await dashboard.listen(DASHBOARD_PORT);
 
+  const tunnel = new TunnelManager(bus);
+
   bus.on((event) => {
     if (event.type === "service:updated") {
       const s = event.payload;
@@ -60,6 +63,16 @@ async function main(): Promise<void> {
       const icon = d.severity === "warning" ? "⚠" : "✗";
       console.log(`${icon} ${d.label}: ${d.message ?? d.severity}`);
     }
+    if (event.type === "connection:updated") {
+      const c = event.payload;
+      if (c.tunnel === "connected" && c.deviceUrl) {
+        console.log("");
+        console.log(`Device URL: ${c.deviceUrl}`);
+      }
+      if (c.tunnel === "disconnected") {
+        console.log("⚠ Tunnel disconnected");
+      }
+    }
   });
 
   console.log("Loclyn");
@@ -68,10 +81,15 @@ async function main(): Promise<void> {
 
   await registry.checkAll();
   await proxy.listen(PROXY_PORT);
+  tunnel.reportProxyRunning();
 
   console.log("");
   console.log(`Proxy running at http://localhost:${PROXY_PORT}`);
   console.log(`Dashboard running at http://localhost:${DASHBOARD_PORT}`);
+  console.log("Starting tunnel...");
+
+  tunnel.start(PROXY_PORT);
+
   console.log("");
   console.log("Press Ctrl+C to stop.");
 
