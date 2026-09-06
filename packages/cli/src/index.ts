@@ -9,7 +9,7 @@ import {
   TunnelManager,
   type ServiceConfig,
 } from "@loclyn/core";
-import { DashboardServer } from "@loclyn/dashboard";
+import { DashboardServer } from "@loclyn/dashboard-server";
 
 const PROXY_PORT = 4020;
 const DASHBOARD_PORT = 4021;

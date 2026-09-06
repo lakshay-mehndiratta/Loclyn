@@ -1,0 +1,126 @@
+/*!*************************************************************************************************************************************************************************************************************************************************************************!*\
+  !*** css ../../node_modules/next/dist/build/webpack/loaders/css-loader/src/index.js??ruleSet[1].rules[14].oneOf[12].use[2]!../../node_modules/next/dist/build/webpack/loaders/postcss-loader/src/index.js??ruleSet[1].rules[14].oneOf[12].use[3]!./src/app/globals.css ***!
+  \*************************************************************************************************************************************************************************************************************************************************************************/
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: -apple-system, "Segoe UI", sans-serif;
+  background: #0b0d12;
+  color: #e4e6eb;
+}
+
+.app-shell {
+  display: flex;
+  min-height: 100vh;
+}
+
+.sidebar {
+  width: 220px;
+  flex-shrink: 0;
+  background: #0f1117;
+  border-right: 1px solid #1f222b;
+  padding: 20px 12px;
+}
+
+.sidebar-brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px 24px 12px;
+  font-weight: 600;
+  font-size: 16px;
+}
+
+.brand-mark {
+  color: #7c6cf6;
+}
+
+.sidebar-nav {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.nav-item {
+  border-radius: 6px;
+  font-size: 14px;
+}
+
+.nav-item a {
+  display: block;
+  padding: 8px 12px;
+  color: #e4e6eb;
+  text-decoration: none;
+  border-radius: 6px;
+}
+
+.nav-item-active a,
+.nav-item-active {
+  background: #1c1f2a;
+}
+
+.nav-item-disabled {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  color: #565a66;
+  cursor: default;
+}
+
+.nav-badge {
+  font-size: 10px;
+  background: #1c1f2a;
+  color: #7a7f8c;
+  padding: 2px 6px;
+  border-radius: 10px;
+}
+
+.app-main {
+  flex: 1 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 24px;
+  border-bottom: 1px solid #1f222b;
+}
+
+.header-title {
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.header-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: #9aa0ac;
+}
+
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.status-unknown { background: #565a66; }
+.status-ok { background: #22c55e; }
+.status-warning { background: #eab308; }
+.status-error { background: #ef4444; }
+
+.page-content {
+  padding: 24px;
+  flex: 1 1;
+}
