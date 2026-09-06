@@ -113,6 +113,7 @@ body {
   height: 8px;
   border-radius: 50%;
   display: inline-block;
+  flex-shrink: 0;
 }
 
 .status-unknown { background: #565a66; }
@@ -123,4 +124,129 @@ body {
 .page-content {
   padding: 24px;
   flex: 1 1;
+}
+
+.overview-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-gap: 16px;
+  gap: 16px;
+}
+
+.panel {
+  background: #12141c;
+  border: 1px solid #1f222b;
+  border-radius: 10px;
+  padding: 18px;
+}
+
+.panel-wide {
+  grid-column: 1 / -1;
+}
+
+.panel h2 {
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #9aa0ac;
+  margin-bottom: 14px;
+}
+
+.empty-state {
+  color: #565a66;
+  font-size: 13px;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+th, td {
+  text-align: left;
+  padding: 8px;
+  border-bottom: 1px solid #1a1d26;
+}
+
+th {
+  color: #9aa0ac;
+  font-weight: 500;
+  font-size: 12px;
+}
+
+tr:last-child td {
+  border-bottom: none;
+}
+
+.dim {
+  color: #7a7f8c;
+}
+
+.badge {
+  display: inline-block;
+  background: #1c1f2a;
+  color: #c7cad1;
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+
+.code-ok { color: #22c55e; }
+.code-warning { color: #eab308; }
+.code-error { color: #ef4444; }
+
+.connection-summary {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 24px;
+  flex-wrap: wrap;
+}
+
+.device-url-block {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.device-url {
+  font-size: 17px;
+  font-family: "Consolas", monospace;
+  color: #7dd3fc;
+  text-decoration: none;
+}
+
+.device-url:hover {
+  text-decoration: underline;
+}
+
+.device-url-empty {
+  color: #565a66;
+}
+
+.connection-fields {
+  display: flex;
+  gap: 32px;
+  flex-wrap: wrap;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.field-label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #9aa0ac;
+}
+
+.field-value {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
 }
