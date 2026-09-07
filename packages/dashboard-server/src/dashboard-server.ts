@@ -6,20 +6,26 @@ import type {
   ServiceState,
   DiagnosticResult,
   ConnectionState,
+  RequestLogEntry,
 } from "@loclyn/core";
+
+const MAX_REQUEST_HISTORY = 50;
 
 /**
  * DashboardServer is a pure subscriber to the same LoclynEventBus used by
  * the proxy, registry, diagnostics engine, and tunnel manager — it does
  * not touch any of them directly.
  *
- * It exposes a WebSocket-only API (no HTML/static file serving — that's
- * now the Next.js app's job in packages/dashboard). It keeps a small
- * in-memory snapshot of the LATEST service, diagnostic, and connection
- * state it has seen, because those events only fire once, at the moment
- * they change — a client connecting afterward would otherwise never see
- * them. request:logged is NOT snapshotted, since it's a stream of past
- * events, not current state.
+ * It exposes a WebSocket-only API. It keeps a small in-memory snapshot of
+ * the LATEST service, diagnostic, and connection state (each represents
+ * current state — one true answer per key) plus a CAPPED, MOST-RECENT
+ * request history (requests are individual past events, not state, so we
+ * keep a bounded ring buffer rather than "the one true value").
+ *
+ * This snapshot is entirely in-memory and is lost if the CLI process
+ * itself restarts — it is not persisted to disk. It only protects against
+ * a browser tab reconnecting (page refresh, new tab, brief disconnect),
+ * which is the common case this was built for.
  */
 export class DashboardServer {
   private server: http.Server;
@@ -30,6 +36,8 @@ export class DashboardServer {
   private latestServices = new Map<string, ServiceState>();
   private latestDiagnostics = new Map<string, DiagnosticResult>();
   private latestConnection: ConnectionState | null = null;
+  // Most recent first, capped at MAX_REQUEST_HISTORY.
+  private recentRequests: RequestLogEntry[] = [];
 
   constructor(private bus: LoclynEventBus) {
     this.server = http.createServer((_req, res) => {
@@ -61,10 +69,23 @@ export class DashboardServer {
     if (event.type === "connection:updated") {
       this.latestConnection = event.payload;
     }
+    if (event.type === "request:logged") {
+      this.recentRequests.unshift(event.payload);
+      if (this.recentRequests.length > MAX_REQUEST_HISTORY) {
+        this.recentRequests.length = MAX_REQUEST_HISTORY;
+      }
+    }
 
     this.broadcast(event);
   }
 
+  /** Sends every currently-known service, diagnostic, and connection
+   * state, plus the recent request history, to one newly connected
+   * client — as normal LoclynEvent messages. The browser side doesn't
+   * need to know this is a "replay," it just looks like a burst of the
+   * same event types it already handles. Requests are replayed oldest
+   * first, so the client's own most-recent-first prepend logic ends up
+   * with them in the correct final order. */
   private sendSnapshot(socket: WebSocket): void {
     for (const service of this.latestServices.values()) {
       this.sendTo(socket, { type: "service:updated", payload: service });
@@ -74,6 +95,9 @@ export class DashboardServer {
     }
     if (this.latestConnection) {
       this.sendTo(socket, { type: "connection:updated", payload: this.latestConnection });
+    }
+    for (const request of [...this.recentRequests].reverse()) {
+      this.sendTo(socket, { type: "request:logged", payload: request });
     }
   }
 
