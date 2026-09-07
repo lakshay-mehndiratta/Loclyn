@@ -8,7 +8,7 @@ const NAV_ITEMS = [
   { label: "Services", href: "/services", enabled: false },
   { label: "Requests", href: "/requests", enabled: false },
   { label: "WebSockets", href: "/websockets", enabled: false },
-  { label: "Diagnostics", href: "/diagnostics", enabled: false },
+  { label: "Diagnostics", href: "/diagnostics", enabled: true },
   { label: "Logs", href: "/logs", enabled: false },
   { label: "Settings", href: "/settings", enabled: false },
 ];
