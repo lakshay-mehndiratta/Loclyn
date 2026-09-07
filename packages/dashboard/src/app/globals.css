@@ -246,3 +246,9 @@ tr:last-child td {
   gap: 6px;
   font-size: 14px;
 }
+
+.about-text {
+  font-size: 13px;
+  line-height: 1.6;
+  color: #b3b7c1;
+}
