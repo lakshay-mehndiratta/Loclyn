@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 
 const NAV_ITEMS = [
   { label: "Overview", href: "/", enabled: true },
-  { label: "Services", href: "/services", enabled: false },
+  { label: "Services", href: "/services", enabled: true },
   { label: "Requests", href: "/requests", enabled: false },
   { label: "WebSockets", href: "/websockets", enabled: false },
   { label: "Diagnostics", href: "/diagnostics", enabled: true },

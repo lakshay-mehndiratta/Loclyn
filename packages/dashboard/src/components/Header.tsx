@@ -6,6 +6,7 @@ import { useLoclynData } from "@/lib/LoclynDataContext";
 const PAGE_TITLES: Record<string, string> = {
   "/": "Overview",
   "/diagnostics": "Diagnostics",
+  "/services": "Services",
 };
 
 export function Header() {
