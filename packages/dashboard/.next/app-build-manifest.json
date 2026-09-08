@@ -20,6 +20,11 @@
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
       "static/chunks/app/diagnostics/page.js"
+    ],
+    "/requests/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/requests/page.js"
     ]
   }
 }
