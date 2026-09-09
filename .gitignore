@@ -16,6 +16,8 @@ dist/
 build/
 **/build/
 
+.next/
+
 out/
 **/out/
 
