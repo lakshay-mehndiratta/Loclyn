@@ -26,10 +26,11 @@ export default function RequestsPage() {
   const [methodFilter, setMethodFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [serviceFilter, setServiceFilter] = useState<string>("all");
+  const [typeFilter, setTypeFilter] = useState<string>("all");
 
-  // Both filter option lists are derived from the actual requests we've
-  // seen, not hardcoded — so they only ever show methods/services that
-  // have genuinely appeared, never options with zero matching results.
+  // All filter option lists are derived from the actual requests we've
+  // seen, not hardcoded — so they only ever show values that have
+  // genuinely appeared, never an option that would return zero results.
   const availableMethods = useMemo(
     () => Array.from(new Set(requests.map((r) => r.method))).sort(),
     [requests],
@@ -38,15 +39,20 @@ export default function RequestsPage() {
     () => Array.from(new Set(requests.map((r) => r.serviceName))).sort(),
     [requests],
   );
+  const availableTypes = useMemo(
+    () => Array.from(new Set(requests.map((r) => r.type))).sort(),
+    [requests],
+  );
 
   const filtered = useMemo<RequestLogEntry[]>(() => {
     return requests.filter((r) => {
       if (methodFilter !== "all" && r.method !== methodFilter) return false;
       if (serviceFilter !== "all" && r.serviceName !== serviceFilter) return false;
+      if (typeFilter !== "all" && r.type !== typeFilter) return false;
       if (!matchesStatusFilter(r.status, statusFilter)) return false;
       return true;
     });
-  }, [requests, methodFilter, statusFilter, serviceFilter]);
+  }, [requests, methodFilter, statusFilter, serviceFilter, typeFilter]);
 
   return (
     <div>
@@ -58,6 +64,13 @@ export default function RequestsPage() {
               <option value="all">All methods</option>
               {availableMethods.map((m) => (
                 <option key={m} value={m}>{m}</option>
+              ))}
+            </select>
+
+            <select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)}>
+              <option value="all">All types</option>
+              {availableTypes.map((t) => (
+                <option key={t} value={t}>{t}</option>
               ))}
             </select>
 
