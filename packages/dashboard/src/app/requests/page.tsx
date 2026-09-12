@@ -112,7 +112,7 @@ export default function RequestsPage() {
                 <tr key={r.id}>
                   <td className="dim">{new Date(r.time).toLocaleTimeString()}</td>
                   <td><span className="badge">{r.method}</span></td>
-                  <td>{r.path}</td>
+                  <td className="path-cell" title={r.path}>{r.path}</td>
                   <td className={statusClass(r.status)}>{r.status}</td>
                   <td>{r.serviceName}</td>
                   <td className="dim">{r.type}</td>
