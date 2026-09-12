@@ -19,11 +19,11 @@ const program = new Command();
 program
   .name("loclyn")
   .description("Bridge local dev services behind one proxy")
-  .requiredOption("--frontend <port>", "frontend dev server port", parsePort)
-  .requiredOption("--backend <port>", "backend dev server port", parsePort)
+  .requiredOption("--frontend <port>", "frontend dev server port (or your only port, for a single full-stack app)", parsePort)
+  .option("--backend <port>", "backend dev server port, if separate from the frontend", parsePort)
   .parse(process.argv);
 
-const options = program.opts<{ frontend: number; backend: number }>();
+const options = program.opts<{ frontend: number; backend?: number }>();
 
 function parsePort(value: string): number {
   const port = Number(value);
@@ -37,8 +37,16 @@ function parsePort(value: string): number {
 async function main(): Promise<void> {
   const services: ServiceConfig[] = [
     { name: "frontend", type: "frontend", port: options.frontend },
-    { name: "backend", type: "backend", port: options.backend, pathPrefix: "/api" },
   ];
+
+  // Only register a separate backend service, with the /api prefix, when
+  // one was actually given. A single full-stack app (e.g. Next.js, where
+  // API routes live on the same port as everything else) has nothing to
+  // split — registering a fake second service would misrepresent the
+  // real setup rather than reflect it.
+  if (options.backend) {
+    services.push({ name: "backend", type: "backend", port: options.backend, pathPrefix: "/api" });
+  }
 
   const bus = new LoclynEventBus();
   const registry = new ServiceRegistry(services, bus);
@@ -59,7 +67,7 @@ async function main(): Promise<void> {
     }
     if (event.type === "diagnostic:updated") {
       const d = event.payload;
-      if (d.severity === "ok") return; // startup checklist only shows problems, not routine OKs
+      if (d.severity === "ok") return;
       const icon = d.severity === "warning" ? "⚠" : "✗";
       console.log(`${icon} ${d.label}: ${d.message ?? d.severity}`);
     }
@@ -96,20 +104,17 @@ async function main(): Promise<void> {
   const shutdown = async () => {
     console.log("\nStopping Loclyn...");
 
-    // Safety net: if graceful shutdown ever hangs for an unforeseen
-    // reason, force-exit after 5 seconds rather than leaving the
-    // terminal stuck forever.
-    const forceExitTimer = setTimeout(() => {
+    const forceExit = setTimeout(() => {
       console.log("Shutdown taking too long — forcing exit.");
       process.exit(1);
     }, 5000);
-    forceExitTimer.unref();
+    forceExit.unref();
 
     tunnel.stop();
     await proxy.close();
     await dashboard.close();
 
-    clearTimeout(forceExitTimer);
+    clearTimeout(forceExit);
     process.exit(0);
   };
 
