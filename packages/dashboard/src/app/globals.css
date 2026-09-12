@@ -157,12 +157,20 @@ table {
   width: 100%;
   border-collapse: collapse;
   font-size: 13px;
+  table-layout: fixed;
 }
 
 th, td {
   text-align: left;
   padding: 8px;
   border-bottom: 1px solid #1a1d26;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.path-cell {
+  max-width: 0; /* forces the cell to respect table-layout: fixed's column width instead of growing to fit content */
 }
 
 th {
