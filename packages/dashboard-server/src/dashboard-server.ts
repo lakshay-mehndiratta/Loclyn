@@ -9,7 +9,7 @@ import type {
   RequestLogEntry,
 } from "@loclyn/core";
 
-const MAX_REQUEST_HISTORY = 50;
+const MAX_REQUEST_HISTORY = 200;
 
 /**
  * DashboardServer is a pure subscriber to the same LoclynEventBus used by

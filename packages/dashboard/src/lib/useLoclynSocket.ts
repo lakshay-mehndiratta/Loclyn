@@ -10,7 +10,7 @@ import type {
 } from "@loclyn/core";
 
 const DASHBOARD_SERVER_PORT = 4021;
-const MAX_REQUESTS = 20;
+const MAX_REQUESTS = 200;
 
 export interface LoclynData {
   wsConnected: boolean;
