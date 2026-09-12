@@ -2,6 +2,8 @@
 
 import { useLoclynData } from "@/lib/LoclynDataContext";
 
+const OVERVIEW_REQUEST_LIMIT = 10;
+
 function statusClass(status: number): string {
   if (status >= 500) return "code-error";
   if (status >= 400) return "code-warning";
@@ -10,11 +12,12 @@ function statusClass(status: number): string {
 
 export function RequestsPanel() {
   const { requests } = useLoclynData();
+  const recent = requests.slice(0, OVERVIEW_REQUEST_LIMIT);
 
   return (
     <section className="panel panel-wide">
       <h2>Recent Requests</h2>
-      {requests.length === 0 ? (
+      {recent.length === 0 ? (
         <p className="empty-state">No requests yet.</p>
       ) : (
         <table>
@@ -30,7 +33,7 @@ export function RequestsPanel() {
             </tr>
           </thead>
           <tbody>
-            {requests.map((r) => (
+            {recent.map((r) => (
               <tr key={r.id}>
                 <td className="dim">{new Date(r.time).toLocaleTimeString()}</td>
                 <td>

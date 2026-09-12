@@ -287,3 +287,31 @@ tr:last-child td {
   padding: 6px 10px;
   font-size: 13px;
 }
+
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  margin-top: 16px;
+}
+
+.pagination button {
+  background: #171923;
+  color: #e4e6eb;
+  border: 1px solid #23262f;
+  border-radius: 6px;
+  padding: 6px 14px;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.pagination button:disabled {
+  color: #565a66;
+  cursor: not-allowed;
+}
+
+.pagination-status {
+  font-size: 13px;
+  color: #9aa0ac;
+}
