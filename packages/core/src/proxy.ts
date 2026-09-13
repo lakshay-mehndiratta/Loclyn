@@ -122,13 +122,33 @@ export class LoclynProxy {
   }
 
   listen(port: number): Promise<void> {
-    return new Promise((resolve) => {
+    return new Promise((resolve, reject) => {
+      // If the port is already taken, Node emits 'error' (with
+      // err.code === "EADDRINUSE") instead of ever calling the listen
+      // callback — without this handler, listen() would hang forever
+      // with no explanation. We listen for 'error' just for this one
+      // startup attempt, then remove it once bound, so it doesn't
+      // interfere with later runtime errors on this same server.
+      const onError = (err: NodeJS.ErrnoException) => {
+        this.server.off("error", onError);
+        if (err.code === "EADDRINUSE") {
+          reject(new Error(`Port ${port} is already in use.`));
+        } else {
+          reject(err);
+        }
+      };
+
+      this.server.once("error", onError);
+
       // Bind explicitly to the IPv4 loopback address, not "localhost" —
       // on Windows, "localhost" can resolve to the IPv6 loopback (::1)
       // depending on Node/DNS config, which can silently mismatch with
       // what cloudflared tries to connect to. Being explicit here removes
       // that ambiguity entirely.
-      this.server.listen(port, "127.0.0.1", () => resolve());
+      this.server.listen(port, "127.0.0.1", () => {
+        this.server.off("error", onError);
+        resolve();
+      });
     });
   }
 
