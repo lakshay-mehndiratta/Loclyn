@@ -50,6 +50,16 @@ export class DashboardServer {
     });
 
     this.wss = new WebSocketServer({ server: this.server, path: "/ws" });
+
+    // ws re-emits the underlying http.Server's 'error' event as its own
+    // 'error' event on the WebSocketServer instance. Node treats an
+    // unlistened 'error' event as fatal and crashes the process — even
+    // though listen() already handles the real error via this.server's
+    // own 'error' listener below. This is a required no-op: the actual
+    // handling happens in listen(), this only prevents the duplicate,
+    // unhandled crash from ws's own re-emission.
+    this.wss.on("error", () => {});
+
     this.wss.on("connection", (socket) => {
       this.clients.add(socket);
       socket.on("close", () => this.clients.delete(socket));
@@ -117,8 +127,22 @@ export class DashboardServer {
   }
 
   listen(port: number): Promise<void> {
-    return new Promise((resolve) => {
-      this.server.listen(port, "127.0.0.1", () => resolve());
+    return new Promise((resolve, reject) => {
+      const onError = (err: NodeJS.ErrnoException) => {
+        this.server.off("error", onError);
+        if (err.code === "EADDRINUSE") {
+          reject(new Error(`Port ${port} is already in use.`));
+        } else {
+          reject(err);
+        }
+      };
+
+      this.server.once("error", onError);
+
+      this.server.listen(port, "127.0.0.1", () => {
+        this.server.off("error", onError);
+        resolve();
+      });
     });
   }
 

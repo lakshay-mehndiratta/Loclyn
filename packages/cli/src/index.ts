@@ -55,7 +55,15 @@ async function main(): Promise<void> {
   new DiagnosticsEngine(bus);
 
   const dashboard = new DashboardServer(bus);
-  await dashboard.listen(DASHBOARD_PORT);
+  try {
+    await dashboard.listen(DASHBOARD_PORT);
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    console.log("");
+    console.log(`✗ Port In Use: ${message}`);
+    console.log(`  Loclyn's dashboard server needs port ${DASHBOARD_PORT} — stop whatever else is using it, or check for a Loclyn instance already running.`);
+    process.exit(1);
+  }
 
   const tunnel = new TunnelManager(bus);
 
@@ -88,7 +96,20 @@ async function main(): Promise<void> {
   console.log("");
 
   await registry.checkAll();
-  await proxy.listen(PROXY_PORT);
+
+  try {
+    await proxy.listen(PROXY_PORT);
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    console.log("");
+    console.log(`✗ Port In Use: ${message}`);
+    console.log(`  Loclyn's proxy needs port ${PROXY_PORT} — stop whatever else is using it, or check for a Loclyn instance already running.`);
+    // The dashboard already started before this point — close it cleanly
+    // rather than leaving it orphaned on a failed startup.
+    await dashboard.close();
+    process.exit(1);
+  }
+
   tunnel.reportProxyRunning();
 
   console.log("");
