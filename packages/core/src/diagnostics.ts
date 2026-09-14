@@ -40,6 +40,9 @@ export class DiagnosticsEngine {
     if (event.type === "request:logged") {
       this.recordRequest(event.payload);
     }
+    if (event.type === "proxy:forward-error") {
+      this.evaluateForwardError(event.payload.serviceName, event.payload.port, event.payload.code);
+    }
   }
 
   // ── Diagnostic 1: api-connectivity ────────────────────────────────────
@@ -70,6 +73,21 @@ export class DiagnosticsEngine {
       this.websocketSeen.add(entry.serviceName);
       this.evaluateWebsocket(entry.serviceName);
       return; // websocket requests don't feed the HTTP status window
+    }
+
+    // A successful (non-502) response for this service means whatever
+    // caused a past connection-refused warning, if any, is no longer
+    // happening — clear it back to ok rather than leaving it stuck.
+    if (entry.status < 500) {
+      this.emitIfChanged({
+        id: "ipv4-ipv6-mismatch",
+        label: "Connection Refused",
+        detail: `${entry.serviceName}`,
+        severity: "ok",
+        confidence: "medium",
+        updatedAt: Date.now(),
+        key: `ipv4-ipv6-mismatch:${entry.serviceName}`,
+      });
     }
 
     const window = this.recentStatuses.get(entry.serviceName) ?? [];
@@ -115,6 +133,28 @@ export class DiagnosticsEngine {
       confidence: "medium", // we see the forward attempt, not confirmed success
       updatedAt: Date.now(),
       key: `websocket-hmr:${serviceName}`,
+    });
+  }
+
+  // ── Diagnostic 4: ipv4-ipv6-mismatch ────────────────────────────────────
+  // Evidence: proxy:forward-error with code ECONNREFUSED — the proxy tried
+  // to reach a service it believed was routable and was actively refused.
+  // We CANNOT confirm this is actually an IPv4/IPv6 binding mismatch from
+  // here — that would require knowing which interface the target process
+  // bound to, which Loclyn has no visibility into. This is reported as a
+  // plausible, common cause, at medium confidence, not a diagnosis.
+  private evaluateForwardError(serviceName: string, port: number, code: string): void {
+    if (code !== "ECONNREFUSED") return;
+
+    this.emitIfChanged({
+      id: "ipv4-ipv6-mismatch",
+      label: "Connection Refused",
+      detail: `${serviceName} (:${port})`,
+      severity: "warning",
+      message: `Proxy connection to "${serviceName}" was actively refused. A common cause is the service binding to a different network interface (e.g. IPv6-only) than the address Loclyn connects on (127.0.0.1). Verify the service explicitly binds to 127.0.0.1.`,
+      confidence: "medium",
+      updatedAt: Date.now(),
+      key: `ipv4-ipv6-mismatch:${serviceName}`,
     });
   }
 

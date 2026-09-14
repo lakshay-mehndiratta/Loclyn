@@ -46,10 +46,25 @@ export class LoclynProxy {
     // If the target service itself errors mid-forward (e.g. it crashed
     // between the routing decision and the actual connection), http-proxy
     // emits 'error' instead of throwing — handle it so Loclyn doesn't crash.
-    this.proxy.on("error", (err, _req, res) => {
+    this.proxy.on("error", (err, req, res) => {
       if (res instanceof http.ServerResponse && !res.headersSent) {
         res.writeHead(502, { "Content-Type": "text/plain" });
         res.end(`Loclyn: proxy error reaching target — ${err.message}`);
+      }
+
+      // Surface the raw failure on the bus too, so DiagnosticsEngine can
+      // pattern-match on it (e.g. ECONNREFUSED). We only know the error
+      // code and which service we were trying to reach — not *why* the
+      // connection was refused, so this is reported as a hypothesis, not
+      // a confirmed cause, by whoever consumes it.
+      const path = req && "url" in req ? (req as http.IncomingMessage).url ?? "/" : "/";
+      const target = this.router.resolve(path);
+      if (target) {
+        const code = (err as NodeJS.ErrnoException).code ?? "UNKNOWN";
+        this.bus.emit({
+          type: "proxy:forward-error",
+          payload: { serviceName: target.name, port: target.port, code, time: Date.now() },
+        });
       }
     });
   }
