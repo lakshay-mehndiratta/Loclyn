@@ -156,3 +156,38 @@ describe("DiagnosticsEngine — websocket-hmr", () => {
     expect(httpDiagnostics).toHaveLength(0);
   });
 });
+
+describe("DiagnosticsEngine — ipv4-ipv6-mismatch", () => {
+  it("reports a warning, at medium confidence, on ECONNREFUSED", () => {
+    bus.emit({
+      type: "proxy:forward-error",
+      payload: { serviceName: "frontend", port: 5173, code: "ECONNREFUSED", time: Date.now() },
+    });
+
+    const results = emitted.filter((d) => d.id === "ipv4-ipv6-mismatch");
+    expect(results).toHaveLength(1);
+    expect(results[0].severity).toBe("warning");
+    expect(results[0].confidence).toBe("medium");
+  });
+
+  it("ignores forward errors that are not ECONNREFUSED", () => {
+    bus.emit({
+      type: "proxy:forward-error",
+      payload: { serviceName: "frontend", port: 5173, code: "ETIMEDOUT", time: Date.now() },
+    });
+
+    const results = emitted.filter((d) => d.id === "ipv4-ipv6-mismatch");
+    expect(results).toHaveLength(0);
+  });
+
+  it("clears back to ok once the same service responds successfully", () => {
+    bus.emit({
+      type: "proxy:forward-error",
+      payload: { serviceName: "frontend", port: 5173, code: "ECONNREFUSED", time: Date.now() },
+    });
+    bus.emit({ type: "request:logged", payload: requestEntry({ serviceName: "frontend", status: 200 }) });
+
+    const results = emitted.filter((d) => d.id === "ipv4-ipv6-mismatch");
+    expect(results.at(-1)?.severity).toBe("ok");
+  });
+});

@@ -36,7 +36,8 @@ export type DiagnosticId =
   | "cors"
   | "https-mixed-content"
   | "port-in-use"
-  | "tunnel-availability";
+  | "tunnel-availability"
+  | "ipv4-ipv6-mismatch";
 
 export type DiagnosticSeverity = "ok" | "warning" | "error";
 
@@ -69,8 +70,16 @@ export interface RequestLogEntry {
 // ── Event bus contract ──────────────────────────────────────────────────
 // Core emits these; CLI and dashboard both subscribe and render independently.
 
+export interface ProxyForwardError {
+  serviceName: string;
+  port: number;
+  code: string; // e.g. "ECONNREFUSED" — Node's raw error code, when available
+  time: number;
+}
+
 export type LoclynEvent =
   | { type: "connection:updated"; payload: ConnectionState }
   | { type: "service:updated"; payload: ServiceState }
   | { type: "diagnostic:updated"; payload: DiagnosticResult }
-  | { type: "request:logged"; payload: RequestLogEntry };
+  | { type: "request:logged"; payload: RequestLogEntry }
+  | { type: "proxy:forward-error"; payload: ProxyForwardError };
