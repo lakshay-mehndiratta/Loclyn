@@ -1,6 +1,7 @@
 "use client";
 
 import { useLoclynData } from "@/lib/LoclynDataContext";
+import { ScrollingText } from "@/components/ScrollingText";
 
 function severityDot(severity: string): string {
   if (severity === "ok") return "status-ok";
@@ -42,9 +43,9 @@ export default function DiagnosticsPage() {
                     <span className={`status-dot ${severityDot(d.severity)}`} />
                   </td>
                   <td>{d.label}</td>
-                  <td className="dim">{d.detail}</td>
+                  <td className="dim"><ScrollingText text={d.detail} /></td>
                   <td>{d.severity}</td>
-                  <td>{d.message ?? "—"}</td>
+                  <td>{d.message ? <ScrollingText text={d.message} /> : "—"}</td>
                   <td className="dim">{confidenceLabel(d.confidence)}</td>
                   <td className="dim">{new Date(d.updatedAt).toLocaleTimeString()}</td>
                 </tr>

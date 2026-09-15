@@ -1,6 +1,7 @@
 "use client";
 
 import { useLoclynData } from "@/lib/LoclynDataContext";
+import { ScrollingText } from "@/components/ScrollingText";
 
 const OVERVIEW_REQUEST_LIMIT = 10;
 
@@ -39,7 +40,7 @@ export function RequestsPanel() {
                 <td>
                   <span className="badge">{r.method}</span>
                 </td>
-                <td className="path-cell" title={r.path}>{r.path}</td>
+                <td className="path-cell"><ScrollingText text={r.path} /></td>
                 <td className={statusClass(r.status)}>{r.status}</td>
                 <td>{r.serviceName}</td>
                 <td className="dim">{r.type}</td>

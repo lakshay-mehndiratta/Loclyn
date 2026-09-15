@@ -315,3 +315,18 @@ tr:last-child td {
   font-size: 13px;
   color: #9aa0ac;
 }
+
+.scrolling-text {
+  overflow: hidden;
+  white-space: nowrap;
+  position: relative;
+}
+
+.scrolling-text-inner {
+  display: inline-block;
+  transition: transform 0.6s ease;
+}
+
+.scrolling-text:hover .scrolling-text-inner {
+  transform: translateX(var(--scroll-distance, 0px));
+}
