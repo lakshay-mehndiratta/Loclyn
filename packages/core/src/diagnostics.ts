@@ -25,6 +25,11 @@ export class DiagnosticsEngine {
   private recentStatuses = new Map<string, number[]>();
   // Whether we've ever seen a successful websocket forward for a service.
   private websocketSeen = new Set<string>();
+  // Services that have had at least one ECONNREFUSED forward error — only
+  // these are eligible to report ipv4-ipv6-mismatch at all, so the
+  // diagnostic never appears as a false "ok" for a service that has never
+  // actually had this failure.
+  private hadForwardError = new Set<string>();
   // Last emitted severity per diagnostic key, so we only emit on change
   // (same "don't spam the bus" pattern as ServiceRegistry.checkOne).
   private lastSeverity = new Map<string, DiagnosticSeverity>();
@@ -76,9 +81,11 @@ export class DiagnosticsEngine {
     }
 
     // A successful (non-502) response for this service means whatever
-    // caused a past connection-refused warning, if any, is no longer
-    // happening — clear it back to ok rather than leaving it stuck.
-    if (entry.status < 500) {
+    // caused a past connection-refused warning is no longer happening —
+    // clear it back to ok. Only applies to services that have actually
+    // had a forward error before; otherwise this diagnostic simply
+    // doesn't exist yet for that service, which is the correct state.
+    if (entry.status < 500 && this.hadForwardError.has(entry.serviceName)) {
       this.emitIfChanged({
         id: "ipv4-ipv6-mismatch",
         label: "Connection Refused",
@@ -146,6 +153,7 @@ export class DiagnosticsEngine {
   private evaluateForwardError(serviceName: string, port: number, code: string): void {
     if (code !== "ECONNREFUSED") return;
 
+    this.hadForwardError.add(serviceName);
     this.emitIfChanged({
       id: "ipv4-ipv6-mismatch",
       label: "Connection Refused",

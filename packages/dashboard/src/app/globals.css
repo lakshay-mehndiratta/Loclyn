@@ -324,9 +324,6 @@ tr:last-child td {
 
 .scrolling-text-inner {
   display: inline-block;
-  transition: transform 0.6s ease;
-}
-
-.scrolling-text:hover .scrolling-text-inner {
-  transform: translateX(var(--scroll-distance, 0px));
+  transition-property: transform;
+  transition-timing-function: ease-in-out;
 }
