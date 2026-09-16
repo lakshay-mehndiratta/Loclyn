@@ -1,6 +1,7 @@
 "use client";
 
 import { useLoclynData } from "@/lib/LoclynDataContext";
+import { ServiceStatusIcon, FrameworkIcon } from "@/components/Badges";
 
 function formatLastChecked(timestamp: number): string {
   const secondsAgo = Math.floor((Date.now() - timestamp) / 1000);
@@ -38,13 +39,20 @@ export default function ServicesPage() {
               {list.map((service) => (
                 <tr key={service.name}>
                   <td>
-                    <span
-                      className={`status-dot ${service.status === "running" ? "status-ok" : "status-error"}`}
-                    />
+                    <ServiceStatusIcon status={service.status} />
                   </td>
                   <td>{service.name}</td>
                   <td className="dim">{service.type}</td>
-                  <td>{service.framework ? <span className="badge">{service.framework}</span> : "—"}</td>
+                  <td>
+                    {service.framework ? (
+                      <span className="framework-badge">
+                        <FrameworkIcon framework={service.framework} />
+                        {service.framework}
+                      </span>
+                    ) : (
+                      "—"
+                    )}
+                  </td>
                   <td>:{service.port}</td>
                   <td>{service.status}</td>
                   <td className="dim">{service.pathPrefix ?? "default (catch-all)"}</td>

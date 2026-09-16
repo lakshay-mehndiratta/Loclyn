@@ -3,17 +3,12 @@
 import { useEffect, useMemo, useState } from "react";
 import { useLoclynData } from "@/lib/LoclynDataContext";
 import { ScrollingText } from "@/components/ScrollingText";
+import { MethodBadge, StatusBadge } from "@/components/Badges";
 import type { RequestLogEntry } from "@loclyn/core";
 
 type StatusFilter = "all" | "2xx" | "4xx" | "5xx";
 
 const PAGE_SIZE = 50;
-
-function statusClass(status: number): string {
-  if (status >= 500) return "code-error";
-  if (status >= 400) return "code-warning";
-  return "code-ok";
-}
 
 function matchesStatusFilter(status: number, filter: StatusFilter): boolean {
   if (filter === "all") return true;
@@ -142,9 +137,9 @@ export default function RequestsPage() {
                 {pageItems.map((r) => (
                   <tr key={r.id}>
                     <td className="dim">{new Date(r.time).toLocaleTimeString()}</td>
-                    <td><span className="badge">{r.method}</span></td>
+                    <td><MethodBadge method={r.method} /></td>
                     <td className="path-cell"><ScrollingText text={r.path} /></td>
-                    <td className={statusClass(r.status)}>{r.status}</td>
+                    <td><StatusBadge status={r.status} /></td>
                     <td>{r.serviceName}</td>
                     <td className="dim">{r.type}</td>
                     <td className="dim">{r.durationMs === null ? "—" : `${r.durationMs}ms`}</td>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useLoclynData } from "@/lib/LoclynDataContext";
+import { SeverityIcon } from "@/components/Badges";
 
 export function DiagnosticsPanel() {
   const { diagnostics } = useLoclynData();
@@ -17,11 +18,7 @@ export function DiagnosticsPanel() {
             {list.map((d) => (
               <tr key={d.id + d.detail}>
                 <td>
-                  <span
-                    className={`status-dot ${
-                      d.severity === "ok" ? "status-ok" : d.severity === "warning" ? "status-warning" : "status-error"
-                    }`}
-                  />
+                  <SeverityIcon severity={d.severity} />
                 </td>
                 <td>{d.label}</td>
                 <td className="dim">{d.detail}</td>

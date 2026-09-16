@@ -1,6 +1,7 @@
 "use client";
 
 import { useLoclynData } from "@/lib/LoclynDataContext";
+import { ServiceStatusIcon, FrameworkIcon } from "@/components/Badges";
 
 export function ServicesPanel() {
   const { services } = useLoclynData();
@@ -17,10 +18,17 @@ export function ServicesPanel() {
             {list.map((service) => (
               <tr key={service.name}>
                 <td>
-                  <span className={`status-dot ${service.status === "running" ? "status-ok" : "status-error"}`} />
+                  <ServiceStatusIcon status={service.status} />
                 </td>
                 <td>{service.name}</td>
-                {service.framework && <td className="badge">{service.framework}</td>}
+                {service.framework && (
+                  <td>
+                    <span className="framework-badge">
+                      <FrameworkIcon framework={service.framework} />
+                      {service.framework}
+                    </span>
+                  </td>
+                )}
                 <td>:{service.port}</td>
                 <td>{service.status}</td>
               </tr>
