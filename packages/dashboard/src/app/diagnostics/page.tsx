@@ -2,12 +2,7 @@
 
 import { useLoclynData } from "@/lib/LoclynDataContext";
 import { ScrollingText } from "@/components/ScrollingText";
-
-function severityDot(severity: string): string {
-  if (severity === "ok") return "status-ok";
-  if (severity === "warning") return "status-warning";
-  return "status-error";
-}
+import { SeverityIcon } from "@/components/Badges";
 
 function confidenceLabel(confidence: string): string {
   return confidence === "high" ? "High confidence" : "Medium confidence";
@@ -40,7 +35,7 @@ export default function DiagnosticsPage() {
               {list.map((d) => (
                 <tr key={d.id + d.detail}>
                   <td>
-                    <span className={`status-dot ${severityDot(d.severity)}`} />
+                    <SeverityIcon severity={d.severity} />
                   </td>
                   <td>{d.label}</td>
                   <td className="dim"><ScrollingText text={d.detail} /></td>
