@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Headphones, Server, Lock, Clock, type LucideIcon } from "lucide-react";
 import { useLoclynData } from "@/lib/LoclynDataContext";
 
 function formatUptime(startedAt: number | null): string {
@@ -12,10 +13,23 @@ function formatUptime(startedAt: number | null): string {
   return `${hours}:${minutes}:${seconds}`;
 }
 
-function StatusField({ label, value, isOk }: { label: string; value: string; isOk: boolean }) {
+function StatusField({
+  label,
+  value,
+  isOk,
+  icon: Icon,
+}: {
+  label: string;
+  value: string;
+  isOk: boolean;
+  icon: LucideIcon;
+}) {
   return (
     <div className="field">
-      <span className="field-label">{label}</span>
+      <span className="field-label">
+        <Icon size={13} strokeWidth={1.75} />
+        {label}
+      </span>
       <span className="field-value">
         <span className={`status-dot ${isOk ? "status-ok" : "status-error"}`} />
         {value}
@@ -55,11 +69,14 @@ export function ConnectionPanel() {
           )}
         </div>
         <div className="connection-fields">
-          <StatusField label="Tunnel" value={tunnel} isOk={tunnel === "connected"} />
-          <StatusField label="Proxy" value={proxy} isOk={proxy === "running"} />
-          <StatusField label="SSL" value={ssl} isOk={ssl === "active"} />
+          <StatusField label="Tunnel" value={tunnel} isOk={tunnel === "connected"} icon={Headphones} />
+          <StatusField label="Proxy" value={proxy} isOk={proxy === "running"} icon={Server} />
+          <StatusField label="SSL" value={ssl} isOk={ssl === "active"} icon={Lock} />
           <div className="field">
-            <span className="field-label">Uptime</span>
+            <span className="field-label">
+              <Clock size={13} strokeWidth={1.75} />
+              Uptime
+            </span>
             <span className="field-value">{formatUptime(connection?.startedAt ?? null)}</span>
           </div>
         </div>
