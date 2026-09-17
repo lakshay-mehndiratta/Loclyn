@@ -88,7 +88,7 @@ export class DiagnosticsEngine {
     if (entry.status < 500 && this.hadForwardError.has(entry.serviceName)) {
       this.emitIfChanged({
         id: "ipv4-ipv6-mismatch",
-        label: "Connection Refused",
+        label: "Connectivity",
         detail: `${entry.serviceName}`,
         severity: "ok",
         confidence: "medium",
@@ -156,10 +156,14 @@ export class DiagnosticsEngine {
     this.hadForwardError.add(serviceName);
     this.emitIfChanged({
       id: "ipv4-ipv6-mismatch",
-      label: "Connection Refused",
-      detail: `${serviceName} (:${port})`,
+      label: "Connectivity",
+      // Must exactly match the detail string used in recordRequest's
+      // clear-to-ok emission below — the dashboard keys each diagnostic
+      // row by id+detail, so any mismatch here creates a second, separate
+      // row instead of updating this one.
+      detail: serviceName,
       severity: "warning",
-      message: `Proxy connection to "${serviceName}" was actively refused. A common cause is the service binding to a different network interface (e.g. IPv6-only) than the address Loclyn connects on (127.0.0.1). Verify the service explicitly binds to 127.0.0.1.`,
+      message: `Proxy connection to "${serviceName}" (:${port}) was actively refused. A common cause is the service binding to a different network interface (e.g. IPv6-only) than the address Loclyn connects on (127.0.0.1). Verify the service explicitly binds to 127.0.0.1.`,
       confidence: "medium",
       updatedAt: Date.now(),
       key: `ipv4-ipv6-mismatch:${serviceName}`,
