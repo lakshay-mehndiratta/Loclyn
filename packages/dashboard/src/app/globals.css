@@ -379,3 +379,9 @@ tr:last-child td {
   align-items: center;
   gap: 5px;
 }
+
+.service-cell {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}

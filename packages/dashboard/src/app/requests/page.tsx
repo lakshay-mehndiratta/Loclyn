@@ -4,11 +4,18 @@ import { useEffect, useMemo, useState } from "react";
 import { useLoclynData } from "@/lib/LoclynDataContext";
 import { ScrollingText } from "@/components/ScrollingText";
 import { MethodBadge, StatusBadge } from "@/components/Badges";
+import { ServiceCell } from "@/components/ServiceCell";
 import type { RequestLogEntry } from "@loclyn/core";
 
 type StatusFilter = "all" | "2xx" | "4xx" | "5xx";
 
 const PAGE_SIZE = 50;
+
+function formatSize(bytes: number | null): string {
+  if (bytes === null) return "0 B";
+  if (bytes < 1024) return `${bytes} B`;
+  return `${(bytes / 1024).toFixed(1)} KB`;
+}
 
 function matchesStatusFilter(status: number, filter: StatusFilter): boolean {
   if (filter === "all") return true;
@@ -19,7 +26,7 @@ function matchesStatusFilter(status: number, filter: StatusFilter): boolean {
 }
 
 export default function RequestsPage() {
-  const { requests } = useLoclynData();
+  const { requests, services } = useLoclynData();
 
   const [methodFilter, setMethodFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
@@ -52,9 +59,6 @@ export default function RequestsPage() {
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
 
-  // If a filter change (or new live traffic shrinking the filtered set)
-  // leaves the current page out of range, snap back to a valid page
-  // instead of showing a blank page with working-looking controls.
   useEffect(() => {
     if (page > totalPages) setPage(totalPages);
   }, [page, totalPages]);
@@ -64,7 +68,7 @@ export default function RequestsPage() {
 
   function handleFilterChange<T>(setter: (value: T) => void, value: T) {
     setter(value);
-    setPage(1); // any filter change should reset to page 1, not strand you on an empty later page
+    setPage(1);
   }
 
   return (
@@ -130,6 +134,7 @@ export default function RequestsPage() {
                   <th>Status</th>
                   <th>Service</th>
                   <th>Type</th>
+                  <th>Size</th>
                   <th>Duration</th>
                 </tr>
               </thead>
@@ -140,8 +145,11 @@ export default function RequestsPage() {
                     <td><MethodBadge method={r.method} /></td>
                     <td className="path-cell"><ScrollingText text={r.path} /></td>
                     <td><StatusBadge status={r.status} /></td>
-                    <td>{r.serviceName}</td>
+                    <td>
+                      <ServiceCell serviceName={r.serviceName} services={services} />
+                    </td>
                     <td className="dim">{r.type}</td>
+                    <td className="dim">{formatSize(r.sizeBytes)}</td>
                     <td className="dim">{r.durationMs === null ? "—" : `${r.durationMs}ms`}</td>
                   </tr>
                 ))}
