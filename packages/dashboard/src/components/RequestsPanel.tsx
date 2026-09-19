@@ -3,11 +3,18 @@
 import { useLoclynData } from "@/lib/LoclynDataContext";
 import { ScrollingText } from "@/components/ScrollingText";
 import { MethodBadge, StatusBadge } from "@/components/Badges";
+import { ServiceCell } from "@/components/ServiceCell";
 
 const OVERVIEW_REQUEST_LIMIT = 10;
 
+function formatSize(bytes: number | null): string {
+  if (bytes === null) return "0 B";
+  if (bytes < 1024) return `${bytes} B`;
+  return `${(bytes / 1024).toFixed(1)} KB`;
+}
+
 export function RequestsPanel() {
-  const { requests } = useLoclynData();
+  const { requests, services } = useLoclynData();
   const recent = requests.slice(0, OVERVIEW_REQUEST_LIMIT);
 
   return (
@@ -25,6 +32,7 @@ export function RequestsPanel() {
               <th>Status</th>
               <th>Service</th>
               <th>Type</th>
+              <th>Size</th>
               <th>Duration</th>
             </tr>
           </thead>
@@ -37,8 +45,11 @@ export function RequestsPanel() {
                 </td>
                 <td className="path-cell"><ScrollingText text={r.path} /></td>
                 <td><StatusBadge status={r.status} /></td>
-                <td>{r.serviceName}</td>
+                <td>
+                  <ServiceCell serviceName={r.serviceName} services={services} />
+                </td>
                 <td className="dim">{r.type}</td>
+                <td className="dim">{formatSize(r.sizeBytes)}</td>
                 <td className="dim">{r.durationMs === null ? "—" : `${r.durationMs}ms`}</td>
               </tr>
             ))}
