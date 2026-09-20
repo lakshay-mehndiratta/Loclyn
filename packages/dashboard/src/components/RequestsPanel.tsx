@@ -30,7 +30,7 @@ export function RequestsPanel() {
               <th>Method</th>
               <th>Path</th>
               <th>Status</th>
-              <th>Service</th>
+              <th className="col-service">Service</th>
               <th>Type</th>
               <th>Size</th>
               <th>Duration</th>
@@ -45,7 +45,7 @@ export function RequestsPanel() {
                 </td>
                 <td className="path-cell"><ScrollingText text={r.path} /></td>
                 <td><StatusBadge status={r.status} /></td>
-                <td>
+                <td className="col-service">
                   <ServiceCell serviceName={r.serviceName} services={services} />
                 </td>
                 <td className="dim">{r.type}</td>

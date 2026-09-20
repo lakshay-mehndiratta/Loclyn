@@ -1,5 +1,6 @@
 import { Box } from "lucide-react";
 import { FrameworkIcon } from "@/components/Badges";
+import { ScrollingText } from "@/components/ScrollingText";
 import type { ServiceState } from "@loclyn/core";
 
 function formatServiceLabel(name: string, framework?: string): string {
@@ -18,8 +19,10 @@ export function ServiceCell({
 
   return (
     <span className="service-cell">
-      {framework ? <FrameworkIcon framework={framework} /> : <Box size={14} color="#7a7f8c" />}
-      {formatServiceLabel(serviceName, framework)}
+      <span className="service-cell-icon">
+        {framework ? <FrameworkIcon framework={framework} /> : <Box size={14} color="#7a7f8c" />}
+      </span>
+      <ScrollingText text={formatServiceLabel(serviceName, framework)} />
     </span>
   );
 }

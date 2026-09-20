@@ -384,4 +384,16 @@ tr:last-child td {
   display: inline-flex;
   align-items: center;
   gap: 6px;
+  max-width: 100%;
+}
+
+.service-cell-icon {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.col-service {
+  width: 22%;
+  padding-right: 16px;
 }

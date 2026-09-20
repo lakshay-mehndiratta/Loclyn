@@ -27,7 +27,14 @@ const FRAMEWORK_ICONS: Record<string, { icon: IconType; color: string }> = {
 };
 
 export function FrameworkIcon({ framework }: { framework: string }) {
-  const match = FRAMEWORK_ICONS[framework.toLowerCase()];
+  const normalized = framework.toLowerCase();
+  // Match by substring, not exact equality — a real project's framework
+  // string can carry extra context (e.g. "Vite (fake)" from the demo
+  // harness, or eventually a detected version string), so we look for a
+  // known key contained anywhere in the reported value rather than
+  // requiring it to match exactly.
+  const key = Object.keys(FRAMEWORK_ICONS).find((k) => normalized.includes(k));
+  const match = key ? FRAMEWORK_ICONS[key] : undefined;
   if (!match) return null;
   const Icon = match.icon;
   return <Icon size={14} color={match.color} style={{ flexShrink: 0 }} />;
