@@ -2,7 +2,7 @@
 
 import { useLoclynData } from "@/lib/LoclynDataContext";
 import { ScrollingText } from "@/components/ScrollingText";
-import { SeverityIcon } from "@/components/Badges";
+import { DiagnosticTypeIcon, SeverityBadge } from "@/components/Badges";
 
 function confidenceLabel(confidence: string): string {
   return confidence === "high" ? "High confidence" : "Medium confidence";
@@ -22,27 +22,30 @@ export default function DiagnosticsPage() {
           <table>
             <thead>
               <tr>
-                <th></th>
                 <th>Check</th>
                 <th>Target</th>
-                <th>Status</th>
                 <th>Detail</th>
                 <th>Confidence</th>
                 <th>Last updated</th>
+                <th>Status</th>
               </tr>
             </thead>
             <tbody>
               {list.map((d) => (
                 <tr key={d.id + d.detail}>
-                  <td>
-                    <SeverityIcon severity={d.severity} />
+                  <td className="col-diagnostic-label">
+                    <span className="diagnostic-label-cell">
+                      <DiagnosticTypeIcon id={d.id} />
+                      {d.label}
+                    </span>
                   </td>
-                  <td>{d.label}</td>
                   <td className="dim"><ScrollingText text={d.detail} /></td>
-                  <td>{d.severity}</td>
                   <td>{d.message ? <ScrollingText text={d.message} /> : "—"}</td>
                   <td className="dim">{confidenceLabel(d.confidence)}</td>
                   <td className="dim">{new Date(d.updatedAt).toLocaleTimeString()}</td>
+                  <td>
+                    <SeverityBadge severity={d.severity} />
+                  </td>
                 </tr>
               ))}
             </tbody>

@@ -397,3 +397,31 @@ tr:last-child td {
   width: 22%;
   padding-right: 16px;
 }
+
+.severity-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-weight: 600;
+  font-size: 13px;
+}
+
+.severity-badge-ok { color: #22c55e; }
+.severity-badge-warning { color: #eab308; }
+.severity-badge-error { color: #ef4444; }
+
+.diagnostic-label-cell {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 500;
+}
+
+.col-diagnostic-label {
+  width: 40%;
+  padding-right: 16px;
+}
+
+.diagnostic-label-cell {
+  white-space: nowrap;
+}

@@ -1,5 +1,17 @@
 import type { LucideIcon } from "lucide-react";
-import { CheckCircle2, AlertTriangle, XCircle, HelpCircle } from "lucide-react";
+import {
+  CheckCircle2,
+  AlertTriangle,
+  XCircle,
+  HelpCircle,
+  Server,
+  Plug,
+  Cable,
+  ShieldAlert,
+  ShieldCheck,
+  DoorClosed,
+  Network,
+} from "lucide-react";
 import {
   SiReact,
   SiVite,
@@ -9,7 +21,7 @@ import {
   SiJavascript,
 } from "react-icons/si";
 import type { IconType } from "react-icons";
-import type { DiagnosticSeverity, ServiceStatus } from "@loclyn/core";
+import type { DiagnosticId, DiagnosticSeverity, ServiceStatus } from "@loclyn/core";
 
 // ── Framework icon, matched by whatever string the service reports ────────
 // Unknown/missing frameworks fall back to a plain generic mark rather than
@@ -87,4 +99,46 @@ export function StatusBadge({ status }: { status: number }) {
   else if (status === 101) className = "status-badge-info";
 
   return <span className={`status-badge ${className}`}>{status}</span>;
+}
+
+// ── Diagnostic type icon — identifies WHAT is being checked, independent
+// of its current severity (severity is shown separately via SeverityBadge
+// below). Falls back to a generic icon for any diagnostic id not in this
+// map, rather than showing nothing.
+
+const DIAGNOSTIC_TYPE_ICONS: Record<DiagnosticId, LucideIcon> = {
+  "http-requests": Server,
+  "api-connectivity": Plug,
+  "websocket-hmr": Cable,
+  cors: ShieldAlert,
+  "https-mixed-content": ShieldCheck,
+  "port-in-use": DoorClosed,
+  "tunnel-availability": Network,
+  "ipv4-ipv6-mismatch": Network,
+};
+
+export function DiagnosticTypeIcon({ id }: { id: DiagnosticId }) {
+  const Icon = DIAGNOSTIC_TYPE_ICONS[id] ?? HelpCircle;
+  return <Icon size={16} strokeWidth={1.75} color="#60a5fa" style={{ flexShrink: 0 }} />;
+}
+
+// ── Severity badge — icon tightly paired with its label text ("OK",
+// "Warning", "Error"), colored to match. Replaces plain lowercase
+// severity text in diagnostic rows.
+
+const SEVERITY_BADGE: Record<DiagnosticSeverity, { icon: LucideIcon; label: string; className: string }> = {
+  ok: { icon: CheckCircle2, label: "OK", className: "severity-badge-ok" },
+  warning: { icon: AlertTriangle, label: "Warning", className: "severity-badge-warning" },
+  error: { icon: XCircle, label: "Error", className: "severity-badge-error" },
+};
+
+export function SeverityBadge({ severity }: { severity: DiagnosticSeverity }) {
+  const match = SEVERITY_BADGE[severity];
+  const Icon = match.icon;
+  return (
+    <span className={`severity-badge ${match.className}`}>
+      <Icon size={15} strokeWidth={2} />
+      {match.label}
+    </span>
+  );
 }
