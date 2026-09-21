@@ -51,6 +51,13 @@ body {
 .nav-item-active a,
 .nav-item-active {
   background: #1c1f2a;
+  color: #a78bfa;
+  font-weight: 600;
+}
+
+.nav-item-active .nav-item-content svg {
+  color: #a78bfa;
+  stroke: #a78bfa;
 }
 
 .nav-item-disabled {
