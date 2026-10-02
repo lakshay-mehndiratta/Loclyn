@@ -2,6 +2,7 @@
 
 import { useLoclynData } from "@/lib/LoclynDataContext";
 import { DiagnosticTypeIcon, SeverityBadge } from "@/components/Badges";
+import { ScrollingText } from "@/components/ScrollingText";
 
 export function DiagnosticsPanel() {
   const { diagnostics } = useLoclynData();
@@ -23,7 +24,7 @@ export function DiagnosticsPanel() {
                     {d.label}
                   </span>
                 </td>
-                <td className="dim">{d.detail}</td>
+                <td className="dim col-diagnostic-detail"><ScrollingText text={d.detail} /></td>
                 <td>{d.message ?? ""}</td>
                 <td>
                   <SeverityBadge severity={d.severity} />

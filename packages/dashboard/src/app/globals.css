@@ -432,3 +432,7 @@ tr:last-child td {
 .diagnostic-label-cell {
   white-space: nowrap;
 }
+
+.col-diagnostic-detail {
+  max-width: 120px;
+}
