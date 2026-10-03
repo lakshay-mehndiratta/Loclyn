@@ -65,6 +65,8 @@ export default function RequestsPage() {
 
   const pageStart = (page - 1) * PAGE_SIZE;
   const pageItems = filtered.slice(pageStart, pageStart + PAGE_SIZE);
+  const rangeStart = filtered.length === 0 ? 0 : pageStart + 1;
+  const rangeEnd = pageStart + pageItems.length;
 
   function handleFilterChange<T>(setter: (value: T) => void, value: T) {
     setter(value);
@@ -75,7 +77,10 @@ export default function RequestsPage() {
     <div>
       <section className="panel">
         <div className="panel-header-row">
-          <h2>All Requests ({filtered.length} of {requests.length})</h2>
+          <h2>
+            All Requests (showing {rangeStart}–{rangeEnd} of {filtered.length}
+            {filtered.length !== requests.length ? ` filtered, ${requests.length} total` : ""})
+          </h2>
           <div className="filters">
             <select
               value={methodFilter}
