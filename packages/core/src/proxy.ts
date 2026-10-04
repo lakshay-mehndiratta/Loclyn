@@ -5,7 +5,23 @@ import { randomUUID } from "node:crypto";
 import httpProxy from "http-proxy";
 import { Router } from "./router.js";
 import { LoclynEventBus } from "./event-bus.js";
-import type { RequestLogEntry } from "./types.js";
+import type { RequestLogEntry, RequestKind } from "./types.js";
+
+/** Classifies a response as document/asset/fetch based on its Content-Type.
+ * This is the one place request "type" is actually determined — it's
+ * derived from what the target service genuinely returned, not guessed
+ * from the request path or hardcoded. */
+function classifyResponse(contentType: string | undefined): RequestKind {
+  if (!contentType) return "fetch";
+  const type = contentType.toLowerCase();
+
+  if (type.includes("text/html")) return "document";
+
+  const assetPrefixes = ["text/css", "application/javascript", "text/javascript", "image/", "font/"];
+  if (assetPrefixes.some((prefix) => type.includes(prefix))) return "asset";
+
+  return "fetch";
+}
 
 /**
  * The Proxy is a normal Node HTTP server. For every incoming request it:
@@ -83,6 +99,7 @@ export class LoclynProxy {
     // Once the response finishes, we know status + duration + size —
     // that's when we log the request, not before.
     res.on("finish", () => {
+      const contentType = res.getHeader("content-type");
       const entry: RequestLogEntry = {
         id: randomUUID(),
         time: startedAt,
@@ -90,7 +107,7 @@ export class LoclynProxy {
         path,
         status: res.statusCode,
         serviceName: target.name,
-        type: "fetch",
+        type: classifyResponse(typeof contentType === "string" ? contentType : undefined),
         sizeBytes: Number(res.getHeader("content-length")) || null,
         durationMs: Date.now() - startedAt,
       };
