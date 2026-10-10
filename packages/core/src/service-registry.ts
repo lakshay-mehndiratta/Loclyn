@@ -14,6 +14,8 @@ import type { ServiceConfig, ServiceState, ServiceStatus } from "./types.js";
  */
 export class ServiceRegistry {
   private services = new Map<string, ServiceState>();
+  private pollTimer: ReturnType<typeof setInterval> | null = null;
+  private checking = false;
 
   constructor(
     configs: ServiceConfig[],
@@ -54,6 +56,31 @@ export class ServiceRegistry {
     await Promise.all(this.list().map((s) => this.checkOne(s.name)));
   }
 
+  /** Re-checks every service on an interval, so a dev server that dies (or
+   * comes back) mid-session is noticed even when no requests are flowing.
+   * Safe to call twice; the second call is a no-op. */
+  startPolling(intervalMs = 3000): void {
+    if (this.pollTimer) return;
+
+    this.pollTimer = setInterval(() => {
+      // Skip this tick if the previous round hasn't finished, so slow
+      // probes can never pile up on top of each other.
+      if (this.checking) return;
+      this.checking = true;
+      this.checkAll().finally(() => {
+        this.checking = false;
+      });
+    }, intervalMs);
+
+    // Polling alone must never keep the process alive during shutdown.
+    this.pollTimer.unref();
+  }
+
+  stopPolling(): void {
+    if (this.pollTimer) clearInterval(this.pollTimer);
+    this.pollTimer = null;
+  }
+
   private async checkOne(name: string): Promise<void> {
     const service = this.services.get(name);
     if (!service) return;
@@ -61,6 +88,8 @@ export class ServiceRegistry {
     const reachable = await this.tcpProbe(service.port);
     const newStatus: ServiceStatus = reachable ? "running" : "unreachable";
 
+    // Only a real status change is recorded and announced — a 3-second
+    // poll that finds nothing new stays silent instead of flooding the bus.
     if (newStatus !== service.status) {
       const updated: ServiceState = {
         ...service,

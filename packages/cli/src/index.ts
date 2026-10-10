@@ -14,6 +14,7 @@ import {
 } from "@loclyn/core";
 import { DashboardServer } from "@loclyn/dashboard-server";
 
+
 const PROXY_PORT = 4020;
 const DASHBOARD_PORT = 4021;
 
@@ -233,6 +234,7 @@ async function main(): Promise<void> {
   }
 
   tunnel.reportProxyRunning();
+  registry.startPolling(3000);
 
   console.log("");
   console.log(`Proxy running at http://localhost:${PROXY_PORT}`);
@@ -254,6 +256,7 @@ async function main(): Promise<void> {
     }, 5000);
     forceExit.unref();
 
+    registry.stopPolling();
     tunnel.stop();
     await proxy.close();
     await dashboard.close();

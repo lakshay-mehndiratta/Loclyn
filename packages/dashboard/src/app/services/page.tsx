@@ -32,7 +32,7 @@ export default function ServicesPage() {
                 <th>Port</th>
                 <th>Status</th>
                 <th>Route</th>
-                <th>Last checked</th>
+                <th>Status since</th>
               </tr>
             </thead>
             <tbody>

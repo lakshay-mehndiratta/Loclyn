@@ -30,6 +30,10 @@ export class DiagnosticsEngine {
   // diagnostic never appears as a false "ok" for a service that has never
   // actually had this failure.
   private hadForwardError = new Set<string>();
+  // Services the registry currently reports as unreachable (from the TCP
+  // probe). Used only to choose honest wording for the connection-refused
+  // message — it never suppresses the diagnostic.
+  private unreachableServices = new Set<string>();
   // Last emitted severity per diagnostic key, so we only emit on change
   // (same "don't spam the bus" pattern as ServiceRegistry.checkOne).
   private lastSeverity = new Map<string, DiagnosticSeverity>();
@@ -54,6 +58,9 @@ export class DiagnosticsEngine {
   // Evidence: service:updated — directly reflects the registry's TCP probe.
   private evaluateServiceReachability(name: string, status: string, port: number): void {
     const severity: DiagnosticSeverity = status === "running" ? "ok" : "error";
+
+    if (status === "unreachable") this.unreachableServices.add(name);
+    else this.unreachableServices.delete(name);
 
     this.emitIfChanged({
       id: "api-connectivity",
@@ -163,7 +170,9 @@ export class DiagnosticsEngine {
       // row instead of updating this one.
       detail: serviceName,
       severity: "warning",
-      message: `Proxy connection to "${serviceName}" (:${port}) was actively refused. A common cause is the service binding to a different network interface (e.g. IPv6-only) than the address Loclyn connects on (127.0.0.1). Verify the service explicitly binds to 127.0.0.1.`,
+      message: this.unreachableServices.has(serviceName)
+        ? `"${serviceName}" is not responding on 127.0.0.1:${port}. It may simply not be running; if it is, it may be bound to a different network interface (e.g. IPv6-only) — verify it binds to 127.0.0.1.`
+        : `Proxy connection to "${serviceName}" (:${port}) was actively refused. The service may have stopped, or may be bound to a different network interface (e.g. IPv6-only) than the address Loclyn connects on (127.0.0.1).`,
       confidence: "medium",
       updatedAt: Date.now(),
       key: `ipv4-ipv6-mismatch:${serviceName}`,
