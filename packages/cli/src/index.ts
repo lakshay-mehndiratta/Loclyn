@@ -1,4 +1,6 @@
 #!/usr/bin/env node
+import net from "node:net";
+import readline from "node:readline/promises";
 import { Command } from "commander";
 import {
   LoclynEventBus,
@@ -7,6 +9,7 @@ import {
   LoclynProxy,
   DiagnosticsEngine,
   TunnelManager,
+  detectProject,
   type ServiceConfig,
 } from "@loclyn/core";
 import { DashboardServer } from "@loclyn/dashboard-server";
@@ -19,11 +22,16 @@ const program = new Command();
 program
   .name("loclyn")
   .description("Bridge local dev services behind one proxy")
-  .requiredOption("--frontend <port>", "frontend dev server port (or your only port, for a single full-stack app)", parsePort)
+  .option(
+    "--frontend <port>",
+    "frontend dev server port (or your only port, for a single full-stack app). Omit to auto-detect from the current folder.",
+    parsePort,
+  )
   .option("--backend <port>", "backend dev server port, if separate from the frontend", parsePort)
+  .option("-y, --yes", "skip the confirmation prompt when auto-detecting")
   .parse(process.argv);
 
-const options = program.opts<{ frontend: number; backend?: number }>();
+const options = program.opts<{ frontend?: number; backend?: number; yes?: boolean }>();
 
 function parsePort(value: string): number {
   const port = Number(value);
@@ -34,19 +42,131 @@ function parsePort(value: string): number {
   return port;
 }
 
-async function main(): Promise<void> {
-  const services: ServiceConfig[] = [
-    { name: "frontend", type: "frontend", port: options.frontend },
+/** Cheap "is anything listening here?" check, used only before startup so
+ * we can warn about a wrong detected port. (The registry does its own
+ * probing once Loclyn is running.) */
+function isPortOpen(port: number, timeoutMs = 800): Promise<boolean> {
+  return new Promise((resolve) => {
+    const socket = new net.Socket();
+    const finish = (result: boolean) => {
+      socket.destroy();
+      resolve(result);
+    };
+    socket.setTimeout(timeoutMs);
+    socket.once("connect", () => finish(true));
+    socket.once("timeout", () => finish(false));
+    socket.once("error", () => finish(false));
+    socket.connect(port, "127.0.0.1");
+  });
+}
+
+/** Decides which services Loclyn should bridge: explicit flags if given,
+ * otherwise auto-detection from the current folder (with confirmation). */
+async function resolveServices(): Promise<ServiceConfig[]> {
+  // ── Explicit mode: unchanged behavior, flags are the source of truth ──
+  if (options.frontend !== undefined) {
+    const services: ServiceConfig[] = [{ name: "frontend", type: "frontend", port: options.frontend }];
+    if (options.backend !== undefined) {
+      services.push({ name: "backend", type: "backend", port: options.backend, pathPrefix: "/api" });
+    }
+    return services;
+  }
+
+  // ── Detection mode ────────────────────────────────────────────────────
+  console.log(`No --frontend given — detecting your stack in ${process.cwd()}`);
+  const { services: detected, notes } = await detectProject(process.cwd());
+  const frontends = detected.filter((s) => s.role === "frontend");
+  const backends = detected.filter((s) => s.role === "backend");
+
+  // Zero or ambiguous matches: don't guess, explain and stop.
+  if (frontends.length !== 1 || (backends.length > 1 && options.backend === undefined)) {
+    if (frontends.length === 0) {
+      console.error("✗ Couldn't detect a frontend framework (looked for Next.js, Vite, Create React App) here.");
+    }
+    for (const note of notes) console.error(`✗ ${note}`);
+    console.error("  Run Loclyn from your project folder, or pass --frontend <port> explicitly.");
+    process.exit(1);
+  }
+
+  const frontend = frontends[0];
+  const frontendPort = frontend.port;
+  if (frontendPort === null) {
+    console.error("✗ Detected a frontend framework but couldn't determine its port. Pass --frontend <port>.");
+    process.exit(1);
+  }
+
+  const entries: Array<{ config: ServiceConfig; note: string }> = [
+    {
+      config: { name: "frontend", type: "frontend", framework: frontend.framework, port: frontendPort },
+      note: frontend.portSource === "script-flag" ? "port from dev script" : "assumed framework default",
+    },
   ];
 
-  // Only register a separate backend service, with the /api prefix, when
-  // one was actually given. A single full-stack app (e.g. Next.js, where
-  // API routes live on the same port as everything else) has nothing to
-  // split — registering a fake second service would misrepresent the
-  // real setup rather than reflect it.
-  if (options.backend) {
-    services.push({ name: "backend", type: "backend", port: options.backend, pathPrefix: "/api" });
+  const detectedBackend = backends.length === 1 ? backends[0] : undefined;
+  const backendPort = options.backend ?? detectedBackend?.port ?? null;
+
+  if (backendPort !== null) {
+    entries.push({
+      config: {
+        name: "backend",
+        type: "backend",
+        framework: detectedBackend?.framework,
+        port: backendPort,
+        pathPrefix: "/api",
+      },
+      note: options.backend !== undefined ? "port from --backend" : "port from dev script",
+    });
+  } else if (detectedBackend) {
+    console.log(
+      `⚠ ${detectedBackend.framework} backend detected, but its port can't be found in package.json. ` +
+        `Pass --backend <port> to route /api to it. Continuing without it.`,
+    );
   }
+
+  console.log("");
+  console.log("Detected:");
+  for (const { config, note } of entries) {
+    console.log(`  ${config.name.padEnd(9)} ${(config.framework ?? "—").padEnd(18)} :${config.port}  (${note})`);
+  }
+  console.log("");
+
+  // Verify the detected ports are actually live before starting anything.
+  const reachable = await Promise.all(entries.map((e) => isPortOpen(e.config.port)));
+  entries.forEach(({ config }, i) => {
+    if (!reachable[i]) console.log(`⚠ Nothing is listening on :${config.port} (${config.name}).`);
+  });
+  if (!reachable[0]) {
+    console.error(
+      "✗ Your frontend isn't running on the detected port. Start your dev server first (e.g. npm run dev), " +
+        "or pass --frontend <port> if it uses a different port.",
+    );
+    process.exit(1);
+  }
+
+  if (!options.yes) {
+    if (!process.stdin.isTTY) {
+      console.error("✗ Not an interactive terminal — pass --yes to start without confirmation.");
+      process.exit(1);
+    }
+    const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
+    rl.on("SIGINT", () => {
+      rl.close();
+      console.log("\nCancelled.");
+      process.exit(0);
+    });
+    const answer = (await rl.question("Start Loclyn with these services (Y/N)? ")).trim().toLowerCase();
+    rl.close();
+    if (answer !== "" && answer !== "y" && answer !== "yes") {
+      console.log("Cancelled.");
+      process.exit(0);
+    }
+  }
+
+  return entries.map((e) => e.config);
+}
+
+async function main(): Promise<void> {
+  const services = await resolveServices();
 
   const bus = new LoclynEventBus();
   const registry = new ServiceRegistry(services, bus);
@@ -61,7 +181,9 @@ async function main(): Promise<void> {
     const message = err instanceof Error ? err.message : String(err);
     console.log("");
     console.log(`✗ Port In Use: ${message}`);
-    console.log(`  Loclyn's dashboard server needs port ${DASHBOARD_PORT} — stop whatever else is using it, or check for a Loclyn instance already running.`);
+    console.log(
+      `  Loclyn's dashboard server needs port ${DASHBOARD_PORT} — stop whatever else is using it, or check for a Loclyn instance already running.`,
+    );
     process.exit(1);
   }
 
@@ -103,9 +225,9 @@ async function main(): Promise<void> {
     const message = err instanceof Error ? err.message : String(err);
     console.log("");
     console.log(`✗ Port In Use: ${message}`);
-    console.log(`  Loclyn's proxy needs port ${PROXY_PORT} — stop whatever else is using it, or check for a Loclyn instance already running.`);
-    // The dashboard already started before this point — close it cleanly
-    // rather than leaving it orphaned on a failed startup.
+    console.log(
+      `  Loclyn's proxy needs port ${PROXY_PORT} — stop whatever else is using it, or check for a Loclyn instance already running.`,
+    );
     await dashboard.close();
     process.exit(1);
   }
@@ -114,7 +236,8 @@ async function main(): Promise<void> {
 
   console.log("");
   console.log(`Proxy running at http://localhost:${PROXY_PORT}`);
-  console.log(`Dashboard running at http://localhost:${DASHBOARD_PORT}`);
+  console.log(`Dashboard data server running at ws://localhost:${DASHBOARD_PORT}`);
+  console.log("Dashboard UI: start it separately, then open http://localhost:3001");
   console.log("Starting tunnel...");
 
   tunnel.start(PROXY_PORT);
