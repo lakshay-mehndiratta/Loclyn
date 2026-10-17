@@ -22,10 +22,10 @@ export default function DiagnosticsPage() {
           <table>
             <thead>
               <tr>
-                <th>Check</th>
-                <th>Target</th>
-                <th>Detail</th>
-                <th>Confidence</th>
+                <th className="dp-label">Check</th>
+                <th className="dp-target">Target</th>
+                <th className="dp-message">Detail</th>
+                <th className="dp-confidence">Confidence</th>
                 <th>Last updated</th>
                 <th>Status</th>
               </tr>
@@ -33,15 +33,19 @@ export default function DiagnosticsPage() {
             <tbody>
               {list.map((d) => (
                 <tr key={d.id + d.detail}>
-                  <td className="col-diagnostic-label">
+                  <td className="dp-label">
                     <span className="diagnostic-label-cell">
                       <DiagnosticTypeIcon id={d.id} />
                       {d.label}
                     </span>
                   </td>
-                  <td className="dim"><ScrollingText text={d.detail} /></td>
-                  <td>{d.message ? <ScrollingText text={d.message} /> : "—"}</td>
-                  <td className="dim">{confidenceLabel(d.confidence)}</td>
+                  <td className="dim dp-target"><ScrollingText text={d.detail} /></td>
+                  <td className="dp-message">
+                    {d.message ? <ScrollingText text={d.message} /> : "—"}
+                  </td>
+                  <td className="dim dp-confidence">
+                    <ScrollingText text={confidenceLabel(d.confidence)} />
+                  </td>
                   <td className="dim">{new Date(d.updatedAt).toLocaleTimeString()}</td>
                   <td>
                     <SeverityBadge severity={d.severity} />

@@ -434,5 +434,12 @@ tr:last-child td {
 }
 
 .col-diagnostic-detail {
-  max-width: 120px;
+  width: 28%;
+  max-width: none;
 }
+
+/* Diagnostics page column widths (fixed table layout reads these from <th>) */
+.dp-label { width: 24%; }
+.dp-target { width: 16%; }
+.dp-message { width: 26%; padding-left: 8px; padding-right: 32px; }
+.dp-confidence { width: 14%; }

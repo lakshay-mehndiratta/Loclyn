@@ -7,6 +7,7 @@ import {
   Server,
   Plug,
   Cable,
+  Box,
   ShieldAlert,
   ShieldCheck,
   DoorClosed,
@@ -16,6 +17,9 @@ import {
   SiReact,
   SiVite,
   SiExpress,
+  SiFastify,
+  SiKoa,
+  SiNestjs,
   SiNodedotjs,
   SiNextdotjs,
   SiJavascript,
@@ -31,6 +35,9 @@ const FRAMEWORK_ICONS: Record<string, { icon: IconType; color: string }> = {
   react: { icon: SiReact, color: "#61dafb" },
   vite: { icon: SiVite, color: "#bd34fe" },
   express: { icon: SiExpress, color: "#ffffff" },
+  fastify: { icon: SiFastify, color: "#ffffff" },
+  koa: { icon: SiKoa, color: "#ffffff" },
+  nest: { icon: SiNestjs, color: "#e0234e" },
   node: { icon: SiNodedotjs, color: "#3c873a" },
   "node.js": { icon: SiNodedotjs, color: "#3c873a" },
   next: { icon: SiNextdotjs, color: "#ffffff" },
@@ -40,14 +47,10 @@ const FRAMEWORK_ICONS: Record<string, { icon: IconType; color: string }> = {
 
 export function FrameworkIcon({ framework }: { framework: string }) {
   const normalized = framework.toLowerCase();
-  // Match by substring, not exact equality — a real project's framework
-  // string can carry extra context (e.g. "Vite (fake)" from the demo
-  // harness, or eventually a detected version string), so we look for a
-  // known key contained anywhere in the reported value rather than
-  // requiring it to match exactly.
   const key = Object.keys(FRAMEWORK_ICONS).find((k) => normalized.includes(k));
   const match = key ? FRAMEWORK_ICONS[key] : undefined;
-  if (!match) return null;
+  // Unknown framework: show the neutral box instead of an empty gap.
+  if (!match) return <Box size={14} color="#7a7f8c" style={{ flexShrink: 0 }} />;
   const Icon = match.icon;
   return <Icon size={14} color={match.color} style={{ flexShrink: 0 }} />;
 }
