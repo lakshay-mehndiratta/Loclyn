@@ -25,7 +25,7 @@ export function DiagnosticsPanel() {
                   </span>
                 </td>
                 <td className="dim col-diagnostic-detail"><ScrollingText text={d.detail} /></td>
-                <td>{d.message ?? ""}</td>
+                <td><ScrollingText text={d.message ?? ""} /></td>
                 <td>
                   <SeverityBadge severity={d.severity} />
                 </td>
