@@ -9,7 +9,6 @@ import type {
   RequestLogEntry,
 } from "@loclyn/core";
 
-const DASHBOARD_SERVER_PORT = 4021;
 const MAX_REQUESTS = 200;
 
 export interface LoclynData {
@@ -43,7 +42,7 @@ export function useLoclynSocket(): LoclynData {
     let cancelled = false;
 
     function connect() {
-      const ws = new WebSocket(`ws://localhost:${DASHBOARD_SERVER_PORT}/ws`);
+      const ws = new WebSocket(process.env.NEXT_PUBLIC_LOCLYN_WS_URL ?? "ws://localhost:4021/ws");
       wsRef.current = ws;
 
       ws.onopen = () => {

@@ -10,13 +10,15 @@ import {
   DiagnosticsEngine,
   TunnelManager,
   detectProject,
+  loadConfigFile,
+  ConfigError,
+  CONFIG_FILE_NAME,
+  DEFAULT_PROXY_PORT,
+  DEFAULT_DASHBOARD_PORT,
+  type LoclynConfig,
   type ServiceConfig,
 } from "@loclyn/core";
 import { DashboardServer } from "@loclyn/dashboard-server";
-
-
-const PROXY_PORT = 4020;
-const DASHBOARD_PORT = 4021;
 
 const program = new Command();
 
@@ -25,14 +27,26 @@ program
   .description("Bridge local dev services behind one proxy")
   .option(
     "--frontend <port>",
-    "frontend dev server port (or your only port, for a single full-stack app). Omit to auto-detect from the current folder.",
+    "frontend dev server port (or your only port, for a single full-stack app). Omit to use .loclyn.json or auto-detect.",
     parsePort,
   )
   .option("--backend <port>", "backend dev server port, if separate from the frontend", parsePort)
+  .option("--proxy-port <port>", `port for Loclyn's proxy (default ${DEFAULT_PROXY_PORT})`, parsePort)
+  .option(
+    "--dashboard-port <port>",
+    `port for Loclyn's dashboard data server (default ${DEFAULT_DASHBOARD_PORT})`,
+    parsePort,
+  )
   .option("-y, --yes", "skip the confirmation prompt when auto-detecting")
   .parse(process.argv);
 
-const options = program.opts<{ frontend?: number; backend?: number; yes?: boolean }>();
+const options = program.opts<{
+  frontend?: number;
+  backend?: number;
+  proxyPort?: number;
+  dashboardPort?: number;
+  yes?: boolean;
+}>();
 
 function parsePort(value: string): number {
   const port = Number(value);
@@ -44,8 +58,8 @@ function parsePort(value: string): number {
 }
 
 /** Cheap "is anything listening here?" check, used only before startup so
- * we can warn about a wrong detected port. (The registry does its own
- * probing once Loclyn is running.) */
+ * we can warn about a wrong port. (The registry does its own probing once
+ * Loclyn is running.) */
 function isPortOpen(port: number, timeoutMs = 800): Promise<boolean> {
   return new Promise((resolve) => {
     const socket = new net.Socket();
@@ -61,11 +75,28 @@ function isPortOpen(port: number, timeoutMs = 800): Promise<boolean> {
   });
 }
 
-/** Decides which services Loclyn should bridge: explicit flags if given,
- * otherwise auto-detection from the current folder (with confirmation). */
-async function resolveServices(): Promise<ServiceConfig[]> {
-  // ── Explicit mode: unchanged behavior, flags are the source of truth ──
+/** Loads .loclyn.json from the current folder. Returns null if there is
+ * none; prints every problem and exits if the file is invalid. */
+function loadConfigOrExit(): LoclynConfig | null {
+  try {
+    return loadConfigFile(process.cwd());
+  } catch (err) {
+    if (err instanceof ConfigError) {
+      console.error(`✗ ${err.message}`);
+      process.exit(1);
+    }
+    throw err;
+  }
+}
+
+/** Decides which services Loclyn should bridge. Precedence:
+ * 1. explicit flags, 2. .loclyn.json, 3. auto-detection. */
+async function resolveServices(fileConfig: LoclynConfig | null): Promise<ServiceConfig[]> {
+  // ── 1. Explicit mode: flags are the source of truth ───────────────────
   if (options.frontend !== undefined) {
+    if (fileConfig) {
+      console.log(`Using --frontend flags; ignoring the services listed in ${CONFIG_FILE_NAME}.`);
+    }
     const services: ServiceConfig[] = [{ name: "frontend", type: "frontend", port: options.frontend }];
     if (options.backend !== undefined) {
       services.push({ name: "backend", type: "backend", port: options.backend, pathPrefix: "/api" });
@@ -73,8 +104,29 @@ async function resolveServices(): Promise<ServiceConfig[]> {
     return services;
   }
 
-  // ── Detection mode ────────────────────────────────────────────────────
-  console.log(`No --frontend given — detecting your stack in ${process.cwd()}`);
+  // ── 2. Config file mode ───────────────────────────────────────────────
+  if (fileConfig) {
+    if (options.backend !== undefined) {
+      console.log(`⚠ --backend is ignored when services come from ${CONFIG_FILE_NAME}.`);
+    }
+    console.log(`Using ${CONFIG_FILE_NAME} in ${process.cwd()}`);
+    console.log("");
+    console.log("Services:");
+    for (const s of fileConfig.services) {
+      const route = s.pathPrefix ?? "(catch-all)";
+      console.log(`  ${s.name.padEnd(12)} ${(s.framework ?? "—").padEnd(14)} :${s.port}  ${route}`);
+    }
+    console.log("");
+
+    const reachable = await Promise.all(fileConfig.services.map((s) => isPortOpen(s.port)));
+    fileConfig.services.forEach((s, i) => {
+      if (!reachable[i]) console.log(`⚠ Nothing is listening on :${s.port} (${s.name}).`);
+    });
+    return fileConfig.services;
+  }
+
+  // ── 3. Detection mode ─────────────────────────────────────────────────
+  console.log(`No --frontend or ${CONFIG_FILE_NAME} — detecting your stack in ${process.cwd()}`);
   const { services: detected, notes } = await detectProject(process.cwd());
   const frontends = detected.filter((s) => s.role === "frontend");
   const backends = detected.filter((s) => s.role === "backend");
@@ -85,7 +137,9 @@ async function resolveServices(): Promise<ServiceConfig[]> {
       console.error("✗ Couldn't detect a frontend framework (looked for Next.js, Vite, Create React App) here.");
     }
     for (const note of notes) console.error(`✗ ${note}`);
-    console.error("  Run Loclyn from your project folder, or pass --frontend <port> explicitly.");
+    console.error(
+      `  Run Loclyn from your project folder, create a ${CONFIG_FILE_NAME}, or pass --frontend <port> explicitly.`,
+    );
     process.exit(1);
   }
 
@@ -155,7 +209,7 @@ async function resolveServices(): Promise<ServiceConfig[]> {
       console.log("\nCancelled.");
       process.exit(0);
     });
-    const answer = (await rl.question("Start Loclyn with these services (Y/N)? ")).trim().toLowerCase();
+    const answer = (await rl.question("Start Loclyn with these services? (Y/n) ")).trim().toLowerCase();
     rl.close();
     if (answer !== "" && answer !== "y" && answer !== "yes") {
       console.log("Cancelled.");
@@ -166,8 +220,38 @@ async function resolveServices(): Promise<ServiceConfig[]> {
   return entries.map((e) => e.config);
 }
 
+/** Final safety check after merging flags + file + defaults: Loclyn's own
+ * ports must differ from each other and from every service port. */
+function exitOnPortConflicts(
+  services: ServiceConfig[],
+  proxyPort: number,
+  dashboardPort: number,
+): void {
+  const problems: string[] = [];
+  if (proxyPort === dashboardPort) {
+    problems.push(`proxy and dashboard are both set to port ${proxyPort}`);
+  }
+  for (const s of services) {
+    if (s.port === proxyPort || s.port === dashboardPort) {
+      problems.push(`service "${s.name}" uses port ${s.port}, which Loclyn needs for itself`);
+    }
+  }
+  if (problems.length > 0) {
+    for (const p of problems) console.error(`✗ ${p}`);
+    console.error("  Change the port in your flags or in " + CONFIG_FILE_NAME + ".");
+    process.exit(1);
+  }
+}
+
 async function main(): Promise<void> {
-  const services = await resolveServices();
+  const fileConfig = loadConfigOrExit();
+
+  // flags > config file > defaults
+  const proxyPort = options.proxyPort ?? fileConfig?.proxyPort ?? DEFAULT_PROXY_PORT;
+  const dashboardPort = options.dashboardPort ?? fileConfig?.dashboardPort ?? DEFAULT_DASHBOARD_PORT;
+
+  const services = await resolveServices(fileConfig);
+  exitOnPortConflicts(services, proxyPort, dashboardPort);
 
   const bus = new LoclynEventBus();
   const registry = new ServiceRegistry(services, bus);
@@ -177,13 +261,13 @@ async function main(): Promise<void> {
 
   const dashboard = new DashboardServer(bus);
   try {
-    await dashboard.listen(DASHBOARD_PORT);
+    await dashboard.listen(dashboardPort);
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     console.log("");
     console.log(`✗ Port In Use: ${message}`);
     console.log(
-      `  Loclyn's dashboard server needs port ${DASHBOARD_PORT} — stop whatever else is using it, or check for a Loclyn instance already running.`,
+      `  Loclyn's dashboard server needs port ${dashboardPort} — stop whatever else is using it, or check for a Loclyn instance already running.`,
     );
     process.exit(1);
   }
@@ -221,13 +305,13 @@ async function main(): Promise<void> {
   await registry.checkAll();
 
   try {
-    await proxy.listen(PROXY_PORT);
+    await proxy.listen(proxyPort);
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     console.log("");
     console.log(`✗ Port In Use: ${message}`);
     console.log(
-      `  Loclyn's proxy needs port ${PROXY_PORT} — stop whatever else is using it, or check for a Loclyn instance already running.`,
+      `  Loclyn's proxy needs port ${proxyPort} — stop whatever else is using it, or check for a Loclyn instance already running.`,
     );
     await dashboard.close();
     process.exit(1);
@@ -237,12 +321,17 @@ async function main(): Promise<void> {
   registry.startPolling(3000);
 
   console.log("");
-  console.log(`Proxy running at http://localhost:${PROXY_PORT}`);
-  console.log(`Dashboard data server running at ws://localhost:${DASHBOARD_PORT}`);
+  console.log(`Proxy running at http://localhost:${proxyPort}`);
+  console.log(`Dashboard data server running at ws://localhost:${dashboardPort}`);
   console.log("Dashboard UI: start it separately, then open http://localhost:3001");
+  if (dashboardPort !== DEFAULT_DASHBOARD_PORT) {
+    console.log(
+      `  (custom dashboard port: start the UI with NEXT_PUBLIC_LOCLYN_WS_URL=ws://localhost:${dashboardPort}/ws)`,
+    );
+  }
   console.log("Starting tunnel...");
 
-  tunnel.start(PROXY_PORT);
+  tunnel.start(proxyPort);
 
   console.log("");
   console.log("Press Ctrl+C to stop.");
