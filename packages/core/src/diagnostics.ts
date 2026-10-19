@@ -4,6 +4,7 @@ import type {
   DiagnosticResult,
   DiagnosticSeverity,
   RequestLogEntry,
+  WebSocketConnection,
 } from "./types.js";
 
 const HTTP_WINDOW_SIZE = 5; // how many recent requests per service we consider
@@ -23,8 +24,6 @@ const ERROR_STATUS_THRESHOLD = 500;
 export class DiagnosticsEngine {
   // Rolling window of recent HTTP statuses, per service name.
   private recentStatuses = new Map<string, number[]>();
-  // Whether we've ever seen a successful websocket forward for a service.
-  private websocketSeen = new Set<string>();
   // Services that have had at least one ECONNREFUSED forward error — only
   // these are eligible to report ipv4-ipv6-mismatch at all, so the
   // diagnostic never appears as a false "ok" for a service that has never
@@ -51,6 +50,9 @@ export class DiagnosticsEngine {
     }
     if (event.type === "proxy:forward-error") {
       this.evaluateForwardError(event.payload.serviceName, event.payload.port, event.payload.code);
+    }
+    if (event.type === "websocket:updated") {
+      this.evaluateWebsocket(event.payload);
     }
   }
 
@@ -81,11 +83,8 @@ export class DiagnosticsEngine {
   // Evidence: request:logged — a rolling window of recent HTTP status codes
   // per service. One bad status is noise; several in a row is a pattern.
   private recordRequest(entry: RequestLogEntry): void {
-    if (entry.type === "websocket") {
-      this.websocketSeen.add(entry.serviceName);
-      this.evaluateWebsocket(entry.serviceName);
-      return; // websocket requests don't feed the HTTP status window
-    }
+    // WebSocket outcomes are judged from websocket:updated, not from the log.
+    if (entry.type === "websocket") return;
 
     // A successful (non-502) response for this service means whatever
     // caused a past connection-refused warning is no longer happening —
@@ -132,21 +131,25 @@ export class DiagnosticsEngine {
   }
 
   // ── Diagnostic 3: websocket-hmr ─────────────────────────────────────────
-  // Evidence: request:logged with type "websocket" — we know a WS upgrade
-  // was forwarded. NOTE: we cannot yet detect a WS forward failing after
-  // the fact — proxy.ts currently logs this event unconditionally, before
-  // confirming the upgrade actually succeeded downstream. So this can only
-  // ever report "ok" once seen, never flip back to an error on its own —
-  // that's a known, honest limitation, not something faked here.
-  private evaluateWebsocket(serviceName: string): void {
+  // Evidence: websocket:updated — the proxy observed the real handshake
+  // result (accepted, refused, or unreachable). We know THAT it failed and
+  // the immediate reason; we don't know whether the service itself is at
+  // fault, so a failure is a warning, not an error.
+  private evaluateWebsocket(conn: WebSocketConnection): void {
+    if (conn.status === "connecting") return;
+    const failed = conn.status === "failed";
+
     this.emitIfChanged({
       id: "websocket-hmr",
       label: "WebSocket (HMR)",
-      detail: `${serviceName} connection`,
-      severity: "ok",
-      confidence: "medium", // we see the forward attempt, not confirmed success
+      detail: `${conn.serviceName} connection`,
+      severity: failed ? "warning" : "ok",
+      message: failed
+        ? `WebSocket to "${conn.serviceName}" (${conn.path}) failed: ${conn.reason ?? "unknown reason"}.`
+        : undefined,
+      confidence: "high", // directly observed handshake result
       updatedAt: Date.now(),
-      key: `websocket-hmr:${serviceName}`,
+      key: `websocket-hmr:${conn.serviceName}`,
     });
   }
 

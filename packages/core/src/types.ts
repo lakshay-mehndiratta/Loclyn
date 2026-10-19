@@ -77,9 +77,23 @@ export interface ProxyForwardError {
   time: number;
 }
 
+export type WebSocketStatus = "connecting" | "open" | "closed" | "failed";
+
+export interface WebSocketConnection {
+  id: string;
+  serviceName: string;
+  path: string;
+  status: WebSocketStatus;
+  startedAt: number;
+  openedAt: number | null;
+  closedAt: number | null;
+  reason?: string; // why it failed, when status is "failed"
+}
+
 export type LoclynEvent =
   | { type: "connection:updated"; payload: ConnectionState }
   | { type: "service:updated"; payload: ServiceState }
   | { type: "diagnostic:updated"; payload: DiagnosticResult }
   | { type: "request:logged"; payload: RequestLogEntry }
-  | { type: "proxy:forward-error"; payload: ProxyForwardError };
+  | { type: "proxy:forward-error"; payload: ProxyForwardError }
+  | { type: "websocket:updated"; payload: WebSocketConnection };

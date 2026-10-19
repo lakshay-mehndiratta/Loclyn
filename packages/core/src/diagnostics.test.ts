@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { LoclynEventBus } from "./event-bus.js";
 import { DiagnosticsEngine } from "./diagnostics.js";
-import type { LoclynEvent, DiagnosticResult, RequestLogEntry } from "./types.js";
+import type { LoclynEvent, DiagnosticResult, RequestLogEntry, WebSocketConnection } from "./types.js";
 
 let bus: LoclynEventBus;
 let emitted: DiagnosticResult[];
@@ -134,16 +134,60 @@ describe("DiagnosticsEngine — http-requests", () => {
 });
 
 describe("DiagnosticsEngine — websocket-hmr", () => {
-  it("reports ok with medium confidence once a websocket request is seen", () => {
-    bus.emit({
-      type: "request:logged",
-      payload: requestEntry({ type: "websocket", status: 101, durationMs: null, sizeBytes: null }),
-    });
+  function wsConnection(overrides: Partial<WebSocketConnection> = {}): WebSocketConnection {
+    return {
+      id: "ws-1",
+      serviceName: "frontend",
+      path: "/hmr",
+      status: "open",
+      startedAt: Date.now(),
+      openedAt: Date.now(),
+      closedAt: null,
+      ...overrides,
+    };
+  }
+
+  it("reports ok with high confidence once a websocket is open", () => {
+    bus.emit({ type: "websocket:updated", payload: wsConnection({ status: "open" }) });
 
     const wsDiagnostics = emitted.filter((d) => d.id === "websocket-hmr");
     expect(wsDiagnostics).toHaveLength(1);
     expect(wsDiagnostics[0].severity).toBe("ok");
-    expect(wsDiagnostics[0].confidence).toBe("medium");
+    expect(wsDiagnostics[0].confidence).toBe("high");
+  });
+
+  it("reports a warning with the reason when a websocket fails", () => {
+    bus.emit({
+      type: "websocket:updated",
+      payload: wsConnection({
+        status: "failed",
+        openedAt: null,
+        reason: "could not reach service (ECONNREFUSED)",
+      }),
+    });
+
+    const wsDiagnostics = emitted.filter((d) => d.id === "websocket-hmr");
+    expect(wsDiagnostics.at(-1)?.severity).toBe("warning");
+    expect(wsDiagnostics.at(-1)?.message).toContain("ECONNREFUSED");
+  });
+
+  it("stays silent while a websocket is still connecting", () => {
+    bus.emit({
+      type: "websocket:updated",
+      payload: wsConnection({ status: "connecting", openedAt: null }),
+    });
+
+    expect(emitted.filter((d) => d.id === "websocket-hmr")).toHaveLength(0);
+  });
+
+  it("recovers to ok after a failure once a later websocket opens", () => {
+    bus.emit({
+      type: "websocket:updated",
+      payload: wsConnection({ status: "failed", openedAt: null, reason: "x" }),
+    });
+    bus.emit({ type: "websocket:updated", payload: wsConnection({ id: "ws-2", status: "open" }) });
+
+    expect(emitted.filter((d) => d.id === "websocket-hmr").at(-1)?.severity).toBe("ok");
   });
 
   it("does not count a websocket request toward the http-requests window", () => {

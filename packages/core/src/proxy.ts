@@ -5,7 +5,7 @@ import { randomUUID } from "node:crypto";
 import httpProxy from "http-proxy";
 import { Router } from "./router.js";
 import { LoclynEventBus } from "./event-bus.js";
-import type { RequestLogEntry } from "./types.js";
+import type { RequestLogEntry, WebSocketConnection } from "./types.js";
 import { classify_Response } from "./classify.js";
 
 /**
@@ -26,6 +26,9 @@ import { classify_Response } from "./classify.js";
 export class LoclynProxy {
   private server: http.Server;
   private proxy: httpProxy;
+  // Tracks each in-flight WebSocket by its request object. A WeakMap lets
+  // entries disappear automatically once the request is garbage collected.
+  private wsConnections = new WeakMap<http.IncomingMessage, WebSocketConnection>();
   private sockets = new Set<Socket>();
 
   constructor(
@@ -39,10 +42,33 @@ export class LoclynProxy {
       socket.on("close", () => this.sockets.delete(socket));
     });
 
-    // Node fires 'upgrade' instead of 'request' when a client is asking to
-    // switch this connection to a WebSocket. Without this listener, the
-    // connection just hangs — no error, no response, nothing.
     this.server.on("upgrade", (req, socket, head) => this.handleUpgrade(req, socket, head));
+
+    // http-proxy fires 'proxyReqWs' once it has built the outgoing request
+    // to the service. We watch that request for the real handshake outcome.
+    this.proxy.on("proxyReqWs", (proxyReq, req) => {
+      const conn = this.wsConnections.get(req);
+      if (!conn) return;
+
+      // The service accepted the upgrade: the WebSocket is truly open.
+      proxyReq.on("upgrade", (_res, proxySocket) => {
+        this.openWebSocket(conn);
+        proxySocket.once("close", () => this.closeWebSocket(conn));
+      });
+
+      // The service answered with a normal HTTP response instead of
+      // upgrading: it refused the WebSocket.
+      proxyReq.on("response", (res) => {
+        const status = res.statusCode ?? 502;
+        this.failWebSocket(conn, `service answered ${status} instead of upgrading`, status);
+      });
+
+      // We couldn't reach the service at all.
+      proxyReq.on("error", (err) => {
+        const code = (err as NodeJS.ErrnoException).code ?? err.message;
+        this.failWebSocket(conn, `could not reach service (${code})`, 502);
+      });
+    });
 
     // If the target service itself errors mid-forward (e.g. it crashed
     // between the routing decision and the actual connection), http-proxy
@@ -104,36 +130,86 @@ export class LoclynProxy {
     });
   }
 
-  private handleUpgrade(req: http.IncomingMessage, socket: Duplex, head: Buffer): void {
+    private handleUpgrade(req: http.IncomingMessage, socket: Duplex, head: Buffer): void {
     const path = req.url ?? "/";
     const target = this.router.resolve(path);
 
     if (!target) {
       // No service to route the WebSocket to — close the raw socket
-      // ourselves, since there's no res object to send a normal HTTP
-      // error response through at this point.
+      // ourselves, since there is no res object to send an error through.
       socket.destroy();
       return;
     }
 
-    // Same routing decision as a normal request, just handed to .ws()
-    // instead of .web(). http-proxy performs the upgrade handshake against
-    // the target and then pipes bytes both ways for as long as the
-    // connection stays open.
+    const conn: WebSocketConnection = {
+      id: randomUUID(),
+      serviceName: target.name,
+      path,
+      status: "connecting",
+      startedAt: Date.now(),
+      openedAt: null,
+      closedAt: null,
+    };
+    this.wsConnections.set(req, conn);
+    this.emitWebSocket(conn);
+
+    // The browser hung up. Before the handshake finished that's a failure;
+    // after it, a normal close.
+    socket.once("close", () => {
+      if (conn.status === "connecting") {
+        this.failWebSocket(conn, "client disconnected before the upgrade finished", 499);
+      } else {
+        this.closeWebSocket(conn);
+      }
+    });
+
     this.proxy.ws(req, socket, head, {
       target: `http://127.0.0.1:${target.port}`,
     });
+  }
 
+  // Each transition only fires from the state it expects, so a connection
+  // can never be reported open twice or closed after it failed.
+  private openWebSocket(conn: WebSocketConnection): void {
+    if (conn.status !== "connecting") return;
+    conn.status = "open";
+    conn.openedAt = Date.now();
+    this.emitWebSocket(conn);
+    this.logWebSocket(conn, 101); // 101 Switching Protocols — a real success now
+  }
+
+  private closeWebSocket(conn: WebSocketConnection): void {
+    if (conn.status !== "open") return;
+    conn.status = "closed";
+    conn.closedAt = Date.now();
+    this.emitWebSocket(conn);
+  }
+
+  private failWebSocket(conn: WebSocketConnection, reason: string, httpStatus: number): void {
+    if (conn.status !== "connecting") return;
+    conn.status = "failed";
+    conn.closedAt = Date.now();
+    conn.reason = reason;
+    this.emitWebSocket(conn);
+    this.logWebSocket(conn, httpStatus);
+  }
+
+  private emitWebSocket(conn: WebSocketConnection): void {
+    // Send a copy so later changes to `conn` never alter delivered events.
+    this.bus.emit({ type: "websocket:updated", payload: { ...conn } });
+  }
+
+  private logWebSocket(conn: WebSocketConnection, status: number): void {
     const entry: RequestLogEntry = {
       id: randomUUID(),
-      time: Date.now(),
-      method: req.method ?? "GET",
-      path,
-      status: 101, // "Switching Protocols" — the real status code for a successful WS upgrade
-      serviceName: target.name,
+      time: conn.startedAt,
+      method: "GET",
+      path: conn.path,
+      status,
+      serviceName: conn.serviceName,
       type: "websocket",
-      sizeBytes: null, // a WebSocket connection isn't a single sized response
-      durationMs: null, // it stays open — there's no "duration" for an open connection
+      sizeBytes: null,
+      durationMs: null,
     };
     this.bus.emit({ type: "request:logged", payload: entry });
   }
