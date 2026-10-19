@@ -24,7 +24,7 @@ const NAV_ITEMS: NavItem[] = [
   { label: "Overview", href: "/", enabled: true, icon: LayoutDashboard },
   { label: "Services", href: "/services", enabled: true, icon: Server },
   { label: "Requests", href: "/requests", enabled: true, icon: ListOrdered },
-  { label: "WebSockets", href: "/websockets", enabled: false, icon: Radio },
+  { label: "WebSockets", href: "/websockets", enabled: true, icon: Radio },
   { label: "Diagnostics", href: "/diagnostics", enabled: true, icon: Stethoscope },
   { label: "Logs", href: "/logs", enabled: false, icon: FileText },
   { label: "Settings", href: "/settings", enabled: false, icon: Settings },

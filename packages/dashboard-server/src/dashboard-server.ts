@@ -7,9 +7,11 @@ import type {
   DiagnosticResult,
   ConnectionState,
   RequestLogEntry,
+  WebSocketConnection,
 } from "@loclyn/core";
 
 const MAX_REQUEST_HISTORY = 200;
+const MAX_WEBSOCKET_HISTORY = 100;
 
 /**
  * DashboardServer is a pure subscriber to the same LoclynEventBus used by
@@ -36,6 +38,9 @@ export class DashboardServer {
   private latestServices = new Map<string, ServiceState>();
   private latestDiagnostics = new Map<string, DiagnosticResult>();
   private latestConnection: ConnectionState | null = null;
+  // One entry per WebSocket (keyed by id), overwritten on each state change.
+  // A Map remembers insertion order, so the first key is always the oldest.
+  private latestWebSockets = new Map<string, WebSocketConnection>();
   // Most recent first, capped at MAX_REQUEST_HISTORY.
   private recentRequests: RequestLogEntry[] = [];
 
@@ -86,6 +91,14 @@ export class DashboardServer {
       }
     }
 
+    if (event.type === "websocket:updated") {
+      this.latestWebSockets.set(event.payload.id, event.payload);
+      if (this.latestWebSockets.size > MAX_WEBSOCKET_HISTORY) {
+        const oldest = this.latestWebSockets.keys().next().value;
+        if (oldest !== undefined) this.latestWebSockets.delete(oldest);
+      }
+    }
+
     this.broadcast(event);
   }
 
@@ -105,6 +118,9 @@ export class DashboardServer {
     }
     if (this.latestConnection) {
       this.sendTo(socket, { type: "connection:updated", payload: this.latestConnection });
+    }
+    for (const connection of this.latestWebSockets.values()) {
+      this.sendTo(socket, { type: "websocket:updated", payload: connection });
     }
     for (const request of [...this.recentRequests].reverse()) {
       this.sendTo(socket, { type: "request:logged", payload: request });
