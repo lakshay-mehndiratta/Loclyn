@@ -8,10 +8,12 @@ import type {
   ConnectionState,
   RequestLogEntry,
   WebSocketConnection,
+  LogEntry,
 } from "@loclyn/core";
 
 const MAX_REQUEST_HISTORY = 200;
 const MAX_WEBSOCKET_HISTORY = 100;
+const MAX_LOG_HISTORY = 300;
 
 /**
  * DashboardServer is a pure subscriber to the same LoclynEventBus used by
@@ -43,6 +45,8 @@ export class DashboardServer {
   private latestWebSockets = new Map<string, WebSocketConnection>();
   // Most recent first, capped at MAX_REQUEST_HISTORY.
   private recentRequests: RequestLogEntry[] = [];
+  // Most recent first, capped at MAX_LOG_HISTORY.
+  private recentLogs: LogEntry[] = [];
 
   constructor(private bus: LoclynEventBus) {
     this.server = http.createServer((_req, res) => {
@@ -99,6 +103,11 @@ export class DashboardServer {
       }
     }
 
+    if (event.type === "log:entry") {
+      this.recentLogs.unshift(event.payload);
+      if (this.recentLogs.length > MAX_LOG_HISTORY) this.recentLogs.length = MAX_LOG_HISTORY;
+    }
+
     this.broadcast(event);
   }
 
@@ -121,6 +130,9 @@ export class DashboardServer {
     }
     for (const connection of this.latestWebSockets.values()) {
       this.sendTo(socket, { type: "websocket:updated", payload: connection });
+    }
+    for (const entry of [...this.recentLogs].reverse()) {
+      this.sendTo(socket, { type: "log:entry", payload: entry });
     }
     for (const request of [...this.recentRequests].reverse()) {
       this.sendTo(socket, { type: "request:logged", payload: request });

@@ -8,6 +8,7 @@ import {
   Router,
   LoclynProxy,
   DiagnosticsEngine,
+  LogCollector,
   TunnelManager,
   detectProject,
   loadConfigFile,
@@ -258,6 +259,7 @@ async function main(): Promise<void> {
   const router = new Router(registry);
   const proxy = new LoclynProxy(router, bus);
   new DiagnosticsEngine(bus);
+  new LogCollector(bus);
 
   const dashboard = new DashboardServer(bus);
   try {

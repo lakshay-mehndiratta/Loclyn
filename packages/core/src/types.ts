@@ -90,10 +90,22 @@ export interface WebSocketConnection {
   reason?: string; // why it failed, when status is "failed"
 }
 
+export type LogLevel = "info" | "warn" | "error";
+export type LogSource = "service" | "proxy" | "tunnel" | "diagnostics" | "websocket";
+
+export interface LogEntry {
+  id: string;
+  time: number;
+  level: LogLevel;
+  source: LogSource;
+  message: string;
+}
+
 export type LoclynEvent =
   | { type: "connection:updated"; payload: ConnectionState }
   | { type: "service:updated"; payload: ServiceState }
   | { type: "diagnostic:updated"; payload: DiagnosticResult }
   | { type: "request:logged"; payload: RequestLogEntry }
   | { type: "proxy:forward-error"; payload: ProxyForwardError }
-  | { type: "websocket:updated"; payload: WebSocketConnection };
+  | { type: "websocket:updated"; payload: WebSocketConnection }
+  | { type: "log:entry"; payload: LogEntry };

@@ -9,6 +9,7 @@ const PAGE_TITLES: Record<string, string> = {
   "/services": "Services",
   "/requests": "Requests",
   "/websockets": "WebSockets",
+  "/logs": "Logs",
 };
 
 export function Header() {

@@ -1,4 +1,4 @@
-import { LoclynEventBus, ServiceRegistry, Router, LoclynProxy, DiagnosticsEngine } from "@loclyn/core";
+import { LoclynEventBus, ServiceRegistry, Router, LoclynProxy, DiagnosticsEngine, LogCollector } from "@loclyn/core";
 import { DashboardServer } from "@loclyn/dashboard-server";
 
 const DASHBOARD_PORT = 4021;
@@ -16,6 +16,7 @@ const registry = new ServiceRegistry(
 const router = new Router(registry);
 const proxy = new LoclynProxy(router, bus);
 new DiagnosticsEngine(bus);
+new LogCollector(bus);
 
 // Added so the Next.js dashboard (localhost:3001) can connect to this demo
 // harness for manual UI verification — mirrors exactly what the real CLI

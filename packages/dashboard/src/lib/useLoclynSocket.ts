@@ -8,10 +8,12 @@ import type {
   ConnectionState,
   RequestLogEntry,
   WebSocketConnection,
+  LogEntry,
 } from "@loclyn/core";
 
 const MAX_REQUESTS = 200;
 const MAX_WEBSOCKETS = 100;
+const MAX_LOGS = 300;
 
 export interface LoclynData {
   wsConnected: boolean;
@@ -20,6 +22,7 @@ export interface LoclynData {
   diagnostics: Record<string, DiagnosticResult>;
   requests: RequestLogEntry[];
   websockets: Record<string, WebSocketConnection>;
+  logs: LogEntry[];
 }
 
 const initialData: LoclynData = {
@@ -29,6 +32,7 @@ const initialData: LoclynData = {
   diagnostics: {},
   requests: [],
   websockets: {},
+  logs: [],
 };
 
 /**
@@ -90,6 +94,10 @@ export function useLoclynSocket(): LoclynData {
         if (event.type === "request:logged") {
           const requests = [event.payload, ...prev.requests].slice(0, MAX_REQUESTS);
           return { ...prev, requests };
+        }
+        if (event.type === "log:entry") {
+          const logs = [event.payload, ...prev.logs].slice(0, MAX_LOGS);
+          return { ...prev, logs };
         }
         if (event.type === "websocket:updated") {
           const websockets = { ...prev.websockets, [event.payload.id]: event.payload };

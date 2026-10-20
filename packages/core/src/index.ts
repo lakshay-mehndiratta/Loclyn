@@ -7,3 +7,4 @@ export * from "./diagnostics.js";
 export * from "./tunnel.js";
 export * from "./detect.js";
 export * from "./config.js";
+export * from "./log-collector.js";
