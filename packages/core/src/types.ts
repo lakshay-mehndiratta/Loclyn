@@ -101,6 +101,22 @@ export interface LogEntry {
   message: string;
 }
 
+export type ValueSource = "flag" | "config-file" | "default";
+export type ServicesSource = "flags" | "config-file" | "detection";
+
+export interface LoclynSettings {
+  proxyPort: number;
+  proxyPortSource: ValueSource;
+  dashboardPort: number;
+  dashboardPortSource: ValueSource;
+  servicesSource: ServicesSource;
+  configFile: string | null; // absolute path of .loclyn.json, if one was found
+  workingDirectory: string;
+  startedAt: number;
+  nodeVersion: string;
+  platform: string;
+}
+
 export type LoclynEvent =
   | { type: "connection:updated"; payload: ConnectionState }
   | { type: "service:updated"; payload: ServiceState }
@@ -108,4 +124,5 @@ export type LoclynEvent =
   | { type: "request:logged"; payload: RequestLogEntry }
   | { type: "proxy:forward-error"; payload: ProxyForwardError }
   | { type: "websocket:updated"; payload: WebSocketConnection }
-  | { type: "log:entry"; payload: LogEntry };
+  | { type: "log:entry"; payload: LogEntry }
+  | { type: "settings:updated"; payload: LoclynSettings };

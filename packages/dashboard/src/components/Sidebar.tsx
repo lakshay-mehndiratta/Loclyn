@@ -27,7 +27,7 @@ const NAV_ITEMS: NavItem[] = [
   { label: "WebSockets", href: "/websockets", enabled: true, icon: Radio },
   { label: "Diagnostics", href: "/diagnostics", enabled: true, icon: Stethoscope },
   { label: "Logs", href: "/logs", enabled: true, icon: FileText },
-  { label: "Settings", href: "/settings", enabled: false, icon: Settings },
+  { label: "Settings", href: "/settings", enabled: true, icon: Settings },
 ];
 
 export function Sidebar() {

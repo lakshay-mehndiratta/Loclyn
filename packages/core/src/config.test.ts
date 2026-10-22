@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { parseConfig, loadConfigFile, ConfigError, CONFIG_FILE_NAME } from "./config.js";
+import { parseConfig, loadConfigFile, ConfigError, CONFIG_FILE_NAME, resolveValue } from "./config.js";
 
 function issuesOf(raw: string): string[] {
   try {
@@ -161,5 +161,17 @@ describe("loadConfigFile", () => {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), "loclyn-cfg-"));
     fs.writeFileSync(path.join(dir, CONFIG_FILE_NAME), "{ broken");
     expect(() => loadConfigFile(dir)).toThrow(ConfigError);
+  });
+});
+
+describe("resolveValue", () => {
+  it("prefers the flag over the file and the default", () => {
+    expect(resolveValue(1, 2, 3)).toEqual({ value: 1, source: "flag" });
+  });
+  it("uses the file when there is no flag", () => {
+    expect(resolveValue(undefined, 2, 3)).toEqual({ value: 2, source: "config-file" });
+  });
+  it("falls back to the default when neither is set", () => {
+    expect(resolveValue(undefined, undefined, 3)).toEqual({ value: 3, source: "default" });
   });
 });

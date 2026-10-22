@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import net from "node:net";
+import path from "node:path";
 import readline from "node:readline/promises";
 import { Command } from "commander";
 import {
@@ -12,12 +13,14 @@ import {
   TunnelManager,
   detectProject,
   loadConfigFile,
+  resolveValue,
   ConfigError,
   CONFIG_FILE_NAME,
   DEFAULT_PROXY_PORT,
   DEFAULT_DASHBOARD_PORT,
   type LoclynConfig,
   type ServiceConfig,
+  type ServicesSource,
 } from "@loclyn/core";
 import { DashboardServer } from "@loclyn/dashboard-server";
 
@@ -48,6 +51,10 @@ const options = program.opts<{
   dashboardPort?: number;
   yes?: boolean;
 }>();
+
+// Which source supplied the services; set inside resolveServices and
+// reported to the dashboard's Settings page.
+let servicesSource: ServicesSource = "detection";
 
 function parsePort(value: string): number {
   const port = Number(value);
@@ -98,10 +105,14 @@ async function resolveServices(fileConfig: LoclynConfig | null): Promise<Service
     if (fileConfig) {
       console.log(`Using --frontend flags; ignoring the services listed in ${CONFIG_FILE_NAME}.`);
     }
+
+    servicesSource = "flags";
     const services: ServiceConfig[] = [{ name: "frontend", type: "frontend", port: options.frontend }];
+
     if (options.backend !== undefined) {
       services.push({ name: "backend", type: "backend", port: options.backend, pathPrefix: "/api" });
     }
+
     return services;
   }
 
@@ -110,9 +121,12 @@ async function resolveServices(fileConfig: LoclynConfig | null): Promise<Service
     if (options.backend !== undefined) {
       console.log(`⚠ --backend is ignored when services come from ${CONFIG_FILE_NAME}.`);
     }
+
+    servicesSource = "config-file";
     console.log(`Using ${CONFIG_FILE_NAME} in ${process.cwd()}`);
     console.log("");
     console.log("Services:");
+
     for (const s of fileConfig.services) {
       const route = s.pathPrefix ?? "(catch-all)";
       console.log(`  ${s.name.padEnd(12)} ${(s.framework ?? "—").padEnd(14)} :${s.port}  ${route}`);
@@ -248,8 +262,14 @@ async function main(): Promise<void> {
   const fileConfig = loadConfigOrExit();
 
   // flags > config file > defaults
-  const proxyPort = options.proxyPort ?? fileConfig?.proxyPort ?? DEFAULT_PROXY_PORT;
-  const dashboardPort = options.dashboardPort ?? fileConfig?.dashboardPort ?? DEFAULT_DASHBOARD_PORT;
+  const proxySetting = resolveValue(options.proxyPort, fileConfig?.proxyPort, DEFAULT_PROXY_PORT);
+  const dashboardSetting = resolveValue(
+    options.dashboardPort,
+    fileConfig?.dashboardPort,
+    DEFAULT_DASHBOARD_PORT,
+  );
+  const proxyPort = proxySetting.value;
+  const dashboardPort = dashboardSetting.value;
 
   const services = await resolveServices(fileConfig);
   exitOnPortConflicts(services, proxyPort, dashboardPort);
@@ -322,6 +342,22 @@ async function main(): Promise<void> {
   tunnel.reportProxyRunning();
   registry.startPolling(3000);
 
+  bus.emit({
+    type: "settings:updated",
+    payload: {
+      proxyPort,
+      proxyPortSource: proxySetting.source,
+      dashboardPort,
+      dashboardPortSource: dashboardSetting.source,
+      servicesSource,
+      configFile: fileConfig ? path.join(process.cwd(), CONFIG_FILE_NAME) : null,
+      workingDirectory: process.cwd(),
+      startedAt: Date.now(),
+      nodeVersion: process.version,
+      platform: `${process.platform} (${process.arch})`,
+    },
+  });
+  
   console.log("");
   console.log(`Proxy running at http://localhost:${proxyPort}`);
   console.log(`Dashboard data server running at ws://localhost:${dashboardPort}`);

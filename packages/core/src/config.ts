@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
-import type { ServiceConfig, ServiceType } from "./types.js";
+import type { ServiceConfig, ServiceType, ValueSource } from "./types.js";
 
 export const CONFIG_FILE_NAME = ".loclyn.json";
 export const DEFAULT_PROXY_PORT = 4020;
@@ -170,4 +170,16 @@ export function loadConfigFile(dir: string = process.cwd()): LoclynConfig | null
     throw err;
   }
   return parseConfig(raw);
+}
+
+/** Picks a setting using the precedence flag > config file > default and
+ * reports which source won. This is the single place that rule lives. */
+export function resolveValue<T>(
+  flag: T | undefined,
+  file: T | undefined,
+  fallback: T,
+): { value: T; source: ValueSource } {
+  if (flag !== undefined) return { value: flag, source: "flag" };
+  if (file !== undefined) return { value: file, source: "config-file" };
+  return { value: fallback, source: "default" };
 }
