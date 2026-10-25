@@ -118,6 +118,7 @@ const DIAGNOSTIC_TYPE_ICONS: Record<DiagnosticId, LucideIcon> = {
   "port-in-use": DoorClosed,
   "tunnel-availability": Network,
   "ipv4-ipv6-mismatch": Network,
+  "dev-server-host-check": ShieldAlert,
 };
 
 export function DiagnosticTypeIcon({ id }: { id: DiagnosticId }) {

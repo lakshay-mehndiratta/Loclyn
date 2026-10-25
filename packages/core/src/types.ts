@@ -37,7 +37,8 @@ export type DiagnosticId =
   | "https-mixed-content"
   | "port-in-use"
   | "tunnel-availability"
-  | "ipv4-ipv6-mismatch";
+  | "ipv4-ipv6-mismatch"
+  | "dev-server-host-check";
 
 export type DiagnosticSeverity = "ok" | "warning" | "error";
 

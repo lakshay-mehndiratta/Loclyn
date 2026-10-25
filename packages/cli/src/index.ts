@@ -10,6 +10,7 @@ import {
   LoclynProxy,
   DiagnosticsEngine,
   LogCollector,
+  HostCheckProbe,
   TunnelManager,
   detectProject,
   loadConfigFile,
@@ -295,6 +296,7 @@ async function main(): Promise<void> {
   }
 
   const tunnel = new TunnelManager(bus);
+  const hostCheck = new HostCheckProbe(bus, registry);
 
   bus.on((event) => {
     if (event.type === "service:updated") {
@@ -385,6 +387,7 @@ async function main(): Promise<void> {
 
     registry.stopPolling();
     tunnel.stop();
+    hostCheck.stop();
     await proxy.close();
     await dashboard.close();
 
