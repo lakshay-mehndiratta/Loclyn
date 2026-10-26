@@ -1,4 +1,5 @@
 import { LoclynEventBus } from "./event-bus.js";
+import { CorsAnalyzer } from "./cors.js";
 import type {
   LoclynEvent,
   DiagnosticResult,
@@ -39,6 +40,9 @@ export class DiagnosticsEngine {
 
   constructor(private bus: LoclynEventBus) {
     this.bus.on((event) => this.handleEvent(event));
+    // CORS is judged from cors:observed events. Attached here so it is always
+    // active wherever diagnostics run — it cannot be forgotten at wiring time.
+    new CorsAnalyzer(bus);
   }
 
   private handleEvent(event: LoclynEvent): void {

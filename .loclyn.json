@@ -1,0 +1,13 @@
+
+{
+  "proxyPort": 4020,
+  "dashboardPort": 4021,
+  "services": [
+    {
+      "name": "cors-probe",
+      "type": "backend",
+      "port": 4000,
+      "pathPrefix": "/api"
+    }
+  ]
+}

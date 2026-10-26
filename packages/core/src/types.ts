@@ -118,6 +118,18 @@ export interface LoclynSettings {
   platform: string;
 }
 
+export interface CorsObservation {
+  serviceName: string;
+  method: string;
+  path: string; // query string removed
+  status: number;
+  origin: string; // request "Origin" header
+  host: string; // request "Host" header
+  isPreflight: boolean; // OPTIONS + Access-Control-Request-Method
+  allowOrigin: string | null; // response "Access-Control-Allow-Origin"
+  time: number;
+}
+
 export type LoclynEvent =
   | { type: "connection:updated"; payload: ConnectionState }
   | { type: "service:updated"; payload: ServiceState }
@@ -126,4 +138,5 @@ export type LoclynEvent =
   | { type: "proxy:forward-error"; payload: ProxyForwardError }
   | { type: "websocket:updated"; payload: WebSocketConnection }
   | { type: "log:entry"; payload: LogEntry }
-  | { type: "settings:updated"; payload: LoclynSettings };
+  | { type: "settings:updated"; payload: LoclynSettings }
+  | { type: "cors:observed"; payload: CorsObservation };

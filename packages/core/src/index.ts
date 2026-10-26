@@ -9,3 +9,4 @@ export * from "./detect.js";
 export * from "./config.js";
 export * from "./log-collector.js";
 export * from "./host-check.js";
+export * from "./cors.js";

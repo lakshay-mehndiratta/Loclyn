@@ -5,7 +5,7 @@ import { randomUUID } from "node:crypto";
 import httpProxy from "http-proxy";
 import { Router } from "./router.js";
 import { LoclynEventBus } from "./event-bus.js";
-import type { RequestLogEntry, WebSocketConnection } from "./types.js";
+import type { RequestLogEntry, WebSocketConnection, CorsObservation } from "./types.js";
 import { classify_Response } from "./classify.js";
 
 /**
@@ -107,9 +107,30 @@ export class LoclynProxy {
       return;
     }
 
+    // Capture only the allowlisted CORS-relevant request headers up front.
+    const originHeader = req.headers.origin;
+    const hostHeader = req.headers.host ?? "";
+    const isPreflight = req.method === "OPTIONS" && typeof req.headers["access-control-request-method"] === "string";
+
     // Once the response finishes, we know status + duration + size —
     // that's when we log the request, not before.
     res.on("finish", () => {
+      if (typeof originHeader === "string") {
+        const allow = res.getHeader("access-control-allow-origin");
+        const observation: CorsObservation = {
+          serviceName: target.name,
+          method: req.method ?? "GET",
+          path: path.split("?")[0],
+          status: res.statusCode,
+          origin: originHeader,
+          host: hostHeader,
+          isPreflight,
+          allowOrigin: typeof allow === "string" ? allow : null,
+          time: startedAt,
+        };
+        this.bus.emit({ type: "cors:observed", payload: observation });
+      }
+
       const contentType = res.getHeader("content-type");
       const entry: RequestLogEntry = {
         id: randomUUID(),
