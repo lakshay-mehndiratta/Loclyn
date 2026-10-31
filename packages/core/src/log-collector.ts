@@ -81,6 +81,12 @@ export class LogCollector {
         break;
       }
 
+      case "route:missing": {
+        const r = event.payload;
+        this.log("warn", "proxy", `No service handles ${r.method} ${r.path}`);
+        break;
+      }
+
       // Everything else (including our own log:entry events) is ignored.
       // Ignoring log:entry is what stops this subscriber from looping.
       default:

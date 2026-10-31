@@ -38,7 +38,8 @@ export type DiagnosticId =
   | "port-in-use"
   | "tunnel-availability"
   | "ipv4-ipv6-mismatch"
-  | "dev-server-host-check";
+  | "dev-server-host-check"
+  | "no-route";
 
 export type DiagnosticSeverity = "ok" | "warning" | "error";
 
@@ -130,6 +131,54 @@ export interface CorsObservation {
   time: number;
 }
 
+// ── Redirect observation ───────────────────────────────────────────────
+// Captured from response "Location" headers (redirects / created resources).
+// Only the target's scheme+host and path are kept — the query string and
+// fragment are dropped because they can hold tokens.
+
+export interface LocationObservation {
+  serviceName: string;
+  method: string;
+  path: string; // request path, query removed
+  status: number;
+  requestHost: string; // request "Host" header
+  forwardedProto: string | null; // request "X-Forwarded-Proto", if any
+  locationOrigin: string; // e.g. "http://localhost:4000"
+  locationPath: string; // query/fragment removed
+  time: number;
+}
+
+// ── Unrouted request ───────────────────────────────────────────────────
+// A request reached the proxy but no configured service handles its path.
+
+/** Placeholder service name on request-log rows for unrouted requests. */
+export const UNROUTED_SERVICE = "(no route)";
+
+export interface RouteMissing {
+  method: string;
+  path: string; // query string removed
+  time: number;
+  routes: { name: string; pathPrefix: string | null }[]; // what IS configured
+}
+
+// ── Subresource scan (mixed content inside HTML/CSS bodies) ─────────────
+// Emitted once per HTML/CSS response that was delivered over an HTTPS page.
+
+export interface InsecureResource {
+  url: string; // scheme+host+path only — query/fragment dropped (may hold tokens)
+  source: string; // what loads it, e.g. "script src", "img srcset", "css url()"
+  loopback: boolean; // points at localhost/127.0.0.1 (breaks on other devices)
+}
+
+export interface SubresourceScan {
+  serviceName: string;
+  path: string; // request path, query removed
+  status: number;
+  insecure: InsecureResource[]; // empty = scanned and clean
+  incomplete: boolean; // scan stopped early (size cap or aborted response)
+  time: number;
+}
+
 export type LoclynEvent =
   | { type: "connection:updated"; payload: ConnectionState }
   | { type: "service:updated"; payload: ServiceState }
@@ -139,4 +188,7 @@ export type LoclynEvent =
   | { type: "websocket:updated"; payload: WebSocketConnection }
   | { type: "log:entry"; payload: LogEntry }
   | { type: "settings:updated"; payload: LoclynSettings }
-  | { type: "cors:observed"; payload: CorsObservation };
+  | { type: "cors:observed"; payload: CorsObservation }
+  | { type: "location:observed"; payload: LocationObservation }
+  | { type: "route:missing"; payload: RouteMissing }
+  | { type: "subresources:scanned"; payload: SubresourceScan };

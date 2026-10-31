@@ -12,6 +12,7 @@ import {
   ShieldCheck,
   DoorClosed,
   Network,
+  Route
 } from "lucide-react";
 import {
   SiReact,
@@ -119,6 +120,7 @@ const DIAGNOSTIC_TYPE_ICONS: Record<DiagnosticId, LucideIcon> = {
   "tunnel-availability": Network,
   "ipv4-ipv6-mismatch": Network,
   "dev-server-host-check": ShieldAlert,
+  "no-route": Route,
 };
 
 export function DiagnosticTypeIcon({ id }: { id: DiagnosticId }) {

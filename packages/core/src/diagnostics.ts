@@ -1,5 +1,8 @@
 import { LoclynEventBus } from "./event-bus.js";
 import { CorsAnalyzer } from "./cors.js";
+import { MixedContentAnalyzer } from "./mixed-content.js";
+import { RoutingAnalyzer } from "./routing.js";
+import { UNROUTED_SERVICE } from "./types.js";
 import type {
   LoclynEvent,
   DiagnosticResult,
@@ -43,6 +46,8 @@ export class DiagnosticsEngine {
     // CORS is judged from cors:observed events. Attached here so it is always
     // active wherever diagnostics run — it cannot be forgotten at wiring time.
     new CorsAnalyzer(bus);
+    new MixedContentAnalyzer(bus);
+    new RoutingAnalyzer(bus);
   }
 
   private handleEvent(event: LoclynEvent): void {
@@ -89,6 +94,8 @@ export class DiagnosticsEngine {
   private recordRequest(entry: RequestLogEntry): void {
     // WebSocket outcomes are judged from websocket:updated, not from the log.
     if (entry.type === "websocket") return;
+    // Unrouted requests have no service to judge — the Routing diagnostic owns them.
+    if (entry.serviceName === UNROUTED_SERVICE) return;
 
     // A successful (non-502) response for this service means whatever
     // caused a past connection-refused warning is no longer happening —

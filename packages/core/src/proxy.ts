@@ -5,7 +5,10 @@ import { randomUUID } from "node:crypto";
 import httpProxy from "http-proxy";
 import { Router } from "./router.js";
 import { LoclynEventBus } from "./event-bus.js";
-import type { RequestLogEntry, WebSocketConnection, CorsObservation } from "./types.js";
+import type { RequestLogEntry, WebSocketConnection, CorsObservation, LocationObservation } from "./types.js";
+import { UNROUTED_SERVICE } from "./types.js";
+import { requestScheme } from "./request-scheme.js";
+import { scanResponse, scannableKind } from "./response-scan.js";
 import { classify_Response } from "./classify.js";
 
 /**
@@ -30,6 +33,9 @@ export class LoclynProxy {
   // entries disappear automatically once the request is garbage collected.
   private wsConnections = new WeakMap<http.IncomingMessage, WebSocketConnection>();
   private sockets = new Set<Socket>();
+  // Requests whose response should be scanned for mixed content: only those
+  // the BROWSER made over https (see requestScheme).
+  private scanTargets = new WeakMap<http.IncomingMessage, { serviceName: string; path: string }>();
 
   constructor(
     private router: Router,
@@ -43,6 +49,9 @@ export class LoclynProxy {
     });
 
     this.server.on("upgrade", (req, socket, head) => this.handleUpgrade(req, socket, head));
+    // http-proxy emits 'proxyRes' just before it pipes the response to the
+    // browser. We attach a read-only listener (see scanResponse).
+    this.proxy.on("proxyRes", (proxyRes, req) => this.tapResponse(proxyRes, req));
 
     // http-proxy fires 'proxyReqWs' once it has built the outgoing request
     // to the service. We watch that request for the real handshake outcome.
@@ -96,6 +105,25 @@ export class LoclynProxy {
     });
   }
 
+  private tapResponse(proxyRes: http.IncomingMessage, req: http.IncomingMessage): void {
+    const ctx = this.scanTargets.get(req);
+    if (!ctx) return;
+    const status = proxyRes.statusCode ?? 0;
+    // Redirects, 204 and 304 carry no document to inspect.
+    if (status < 200 || status === 204 || (status >= 300 && status < 400)) return;
+    const kind = scannableKind(proxyRes.headers["content-type"]);
+    if (!kind) return;
+    const result = scanResponse(proxyRes, kind);
+    if (!result) return;
+    const startedAt = Date.now();
+    void result.then(({ insecure, incomplete }) => {
+      this.bus.emit({
+        type: "subresources:scanned",
+        payload: { serviceName: ctx.serviceName, path: ctx.path, status, insecure, incomplete, time: startedAt },
+      });
+    });
+  }
+
   private handleRequest(req: http.IncomingMessage, res: http.ServerResponse): void {
     const startedAt = Date.now();
     const path = req.url ?? "/";
@@ -104,7 +132,31 @@ export class LoclynProxy {
     if (!target) {
       res.writeHead(502, { "Content-Type": "text/plain" });
       res.end("Loclyn: no service configured to handle this path");
+      const bare = path.split("?")[0];
+      this.bus.emit({
+        type: "route:missing",
+        payload: { method: req.method ?? "GET", path: bare, time: startedAt, routes: this.router.routes() },
+      });
+      // Log it too, so the Requests page shows what the browser saw.
+      this.bus.emit({
+        type: "request:logged",
+        payload: {
+          id: randomUUID(),
+          time: startedAt,
+          method: req.method ?? "GET",
+          path,
+          status: 502,
+          serviceName: UNROUTED_SERVICE,
+          type: "fetch",
+          sizeBytes: null,
+          durationMs: Date.now() - startedAt,
+        },
+      });
       return;
+    }
+
+    if (requestScheme(req.headers) === "https" && req.method !== "HEAD") {
+      this.scanTargets.set(req, { serviceName: target.name, path: path.split("?")[0] });
     }
 
     // Capture only the allowlisted CORS-relevant request headers up front.
@@ -131,6 +183,28 @@ export class LoclynProxy {
         this.bus.emit({ type: "cors:observed", payload: observation });
       }
 
+      const locationHeader = res.getHeader("location");
+      if (typeof locationHeader === "string") {
+        try {
+          // Relative redirects ("/login") stay on the same host — nothing to judge.
+          const parsed = new URL(locationHeader);
+          const locationObservation: LocationObservation = {
+            serviceName: target.name,
+            method: req.method ?? "GET",
+            path: path.split("?")[0],
+            status: res.statusCode,
+            requestHost: hostHeader,
+            forwardedProto: requestScheme(req.headers),
+            locationOrigin: parsed.origin,
+            locationPath: parsed.pathname,
+            time: startedAt,
+          };
+          this.bus.emit({ type: "location:observed", payload: locationObservation });
+        } catch {
+          // not an absolute URL — ignore
+        }
+      }
+
       const contentType = res.getHeader("content-type");
       const entry: RequestLogEntry = {
         id: randomUUID(),
@@ -151,11 +225,16 @@ export class LoclynProxy {
     });
   }
 
-    private handleUpgrade(req: http.IncomingMessage, socket: Duplex, head: Buffer): void {
+  private handleUpgrade(req: http.IncomingMessage, socket: Duplex, head: Buffer): void {
     const path = req.url ?? "/";
     const target = this.router.resolve(path);
 
     if (!target) {
+      this.bus.emit({
+        type: "route:missing",
+        payload: { method: "GET", path: path.split("?")[0], time: Date.now(), routes: this.router.routes() },
+      });
+
       // No service to route the WebSocket to — close the raw socket
       // ourselves, since there is no res object to send an error through.
       socket.destroy();

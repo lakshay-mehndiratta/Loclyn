@@ -14,4 +14,9 @@ export class Router {
   resolve(path: string): ServiceState | undefined {
     return this.registry.findByPath(path);
   }
+
+  /** What is configured — used to explain why a path matched nothing. */
+  routes(): { name: string; pathPrefix: string | null }[] {
+    return this.registry.list().map((s) => ({ name: s.name, pathPrefix: s.pathPrefix ?? null }));
+  }
 }
