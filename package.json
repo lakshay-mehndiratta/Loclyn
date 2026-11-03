@@ -1,12 +1,13 @@
 {
-  "name": "loclyn",
+  "name": "loclyn-monorepo",
   "private": true,
   "version": "0.1.0",
   "workspaces": [
     "packages/*"
   ],
   "scripts": {
-    "build": "npm run build -w @loclyn/core && npm run build -w @loclyn/dashboard-server && npm run build -w @loclyn/cli && npm run build -w @loclyn/dashboard",
+    "build": "npm run build -w @loclyn/core && npm run build -w @loclyn/dashboard-server && npm run build -w loclyn && npm run build -w @loclyn/dashboard",
+    "pack:cli": "npm run build && npm pack -w loclyn",
     "test": "npm run test --workspaces --if-present"
   },
   "devDependencies": {

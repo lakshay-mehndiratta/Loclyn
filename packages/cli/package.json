@@ -1,21 +1,35 @@
 {
-  "name": "@loclyn/cli",
+  "name": "loclyn",
   "version": "0.1.0",
+  "description": "Expose a local dev stack (frontend + backend + WebSockets) through one tunnel URL, with live diagnostics and a dashboard.",
+  "keywords": ["tunnel", "cloudflare", "dev-server", "proxy", "diagnostics", "localhost", "mobile-testing"],
   "type": "module",
   "bin": {
-    "loclyn": "dist/index.js"
+    "loclyn": "bundle/index.js"
   },
-  "main": "dist/index.js",
+  "files": [
+    "bundle",
+    "ui",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
     "build": "tsc -p tsconfig.json",
+    "bundle": "node scripts/bundle.mjs",
+    "prepack": "npm run bundle",
     "start": "node dist/index.js"
   },
   "dependencies": {
-    "@loclyn/core": "0.1.0",
-    "@loclyn/dashboard-server": "0.1.0",
-    "commander": "12.1.0"
+    "commander": "12.1.0",
+    "http-proxy": "1.18.1",
+    "ws": "8.21.3"
   },
   "devDependencies": {
-    "@types/node": "22.10.2"
+    "@loclyn/core": "0.1.0",
+    "@loclyn/dashboard-server": "0.1.0",
+    "@types/node": "22.10.2",
+    "esbuild": "0.21.5"
   }
 }
