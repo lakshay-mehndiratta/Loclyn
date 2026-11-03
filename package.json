@@ -6,7 +6,7 @@
     "packages/*"
   ],
   "scripts": {
-    "build": "npm run build --workspaces --if-present",
+    "build": "npm run build -w @loclyn/core && npm run build -w @loclyn/dashboard-server && npm run build -w @loclyn/cli && npm run build -w @loclyn/dashboard",
     "test": "npm run test --workspaces --if-present"
   },
   "devDependencies": {

@@ -4,8 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev -p 3001",
-    "build": "next build",
-    "start": "next start -p 3001"
+    "build": "next build"
   },
   "dependencies": {
     "@loclyn/core": "0.1.0",

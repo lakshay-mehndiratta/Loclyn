@@ -1,7 +1,9 @@
 #!/usr/bin/env node
+import fs from "node:fs";
 import net from "node:net";
 import path from "node:path";
 import readline from "node:readline/promises";
+import { fileURLToPath } from "node:url";
 import { Command } from "commander";
 import {
   LoclynEventBus,
@@ -24,6 +26,17 @@ import {
   type ServicesSource,
 } from "@loclyn/core";
 import { DashboardServer } from "@loclyn/dashboard-server";
+
+/**
+ * Finds the built dashboard (a Next.js static export), or undefined if it has
+ * not been built. Looks next to the CLI first (where a packaged install will
+ * keep it), then at the monorepo build output.
+ */
+function findDashboardUi(): string | undefined {
+  const here = path.dirname(fileURLToPath(import.meta.url));
+  const candidates = [path.resolve(here, "../ui"), path.resolve(here, "../../dashboard/out")];
+  return candidates.find((dir) => fs.existsSync(path.join(dir, "index.html")));
+}
 
 const program = new Command();
 
@@ -282,7 +295,8 @@ async function main(): Promise<void> {
   new DiagnosticsEngine(bus);
   new LogCollector(bus);
 
-  const dashboard = new DashboardServer(bus);
+  const uiDir = findDashboardUi();
+  const dashboard = new DashboardServer(bus, { staticDir: uiDir });
   try {
     await dashboard.listen(dashboardPort);
   } catch (err) {
@@ -363,12 +377,19 @@ async function main(): Promise<void> {
   console.log("");
   console.log(`Proxy running at http://localhost:${proxyPort}`);
   console.log(`Dashboard data server running at ws://localhost:${dashboardPort}`);
-  console.log("Dashboard UI: start it separately, then open http://localhost:3001");
-  if (dashboardPort !== DEFAULT_DASHBOARD_PORT) {
+  if (uiDir) {
+    console.log(`Dashboard UI: http://localhost:${dashboardPort}`);
+  } else {
     console.log(
-      `  (custom dashboard port: start the UI with NEXT_PUBLIC_LOCLYN_WS_URL=ws://localhost:${dashboardPort}/ws)`,
+      "Dashboard UI: not built yet — run `npm run build -w @loclyn/dashboard`, or start it separately and open http://localhost:3001",
     );
+    if (dashboardPort !== DEFAULT_DASHBOARD_PORT) {
+      console.log(
+        `  (custom dashboard port: start the UI with NEXT_PUBLIC_LOCLYN_WS_URL=ws://localhost:${dashboardPort}/ws)`,
+      );
+    }
   }
+  
   console.log("Starting tunnel...");
 
   tunnel.start(proxyPort);

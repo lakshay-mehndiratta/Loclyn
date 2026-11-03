@@ -12,6 +12,8 @@ import type {
   LoclynSettings,
 } from "@loclyn/core";
 
+import { createStaticHandler } from "./static-files.js";
+
 const MAX_REQUEST_HISTORY = 200;
 const MAX_WEBSOCKET_HISTORY = 100;
 const MAX_LOG_HISTORY = 300;
@@ -50,8 +52,17 @@ export class DashboardServer {
   private recentLogs: LogEntry[] = [];
   private latestSettings: LoclynSettings | null = null;
 
-  constructor(private bus: LoclynEventBus) {
-    this.server = http.createServer((_req, res) => {
+  /**
+   * @param options.staticDir A built dashboard (Next.js static export). When
+   *   given, the same port serves the UI over HTTP as well as the /ws data API.
+   */
+  constructor(
+    private bus: LoclynEventBus,
+    options: { staticDir?: string } = {},
+  ) {
+    const serveStatic = options.staticDir ? createStaticHandler(options.staticDir) : null;
+    this.server = http.createServer((req, res) => {
+      if (serveStatic?.(req, res)) return;
       res.writeHead(404);
       res.end();
     });

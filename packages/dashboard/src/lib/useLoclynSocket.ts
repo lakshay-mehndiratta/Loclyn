@@ -12,6 +12,20 @@ import type {
   LoclynSettings,
 } from "@loclyn/core";
 
+/**
+ * Where to find Loclyn's data socket:
+ *  1. NEXT_PUBLIC_LOCLYN_WS_URL, if set (explicit override)
+ *  2. the dev server (port 3001) → the default data port, 4021
+ *  3. otherwise the dashboard is being served BY Loclyn, so use the same host
+ */
+function socketUrl(): string {
+  const override = process.env.NEXT_PUBLIC_LOCLYN_WS_URL;
+  if (override) return override;
+  const { protocol, host, port } = window.location;
+  if (port === "3001") return "ws://localhost:4021/ws";
+  return `${protocol === "https:" ? "wss" : "ws"}://${host}/ws`;
+}
+
 const MAX_REQUESTS = 200;
 const MAX_WEBSOCKETS = 100;
 const MAX_LOGS = 300;
@@ -53,7 +67,7 @@ export function useLoclynSocket(): LoclynData {
     let cancelled = false;
 
     function connect() {
-      const ws = new WebSocket(process.env.NEXT_PUBLIC_LOCLYN_WS_URL ?? "ws://localhost:4021/ws");
+      const ws = new WebSocket(socketUrl())
       wsRef.current = ws;
 
       ws.onopen = () => {
