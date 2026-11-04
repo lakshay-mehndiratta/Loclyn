@@ -3,6 +3,17 @@
   "version": "0.1.0",
   "description": "Expose a local dev stack (frontend + backend + WebSockets) through one tunnel URL, with live diagnostics and a dashboard.",
   "keywords": ["tunnel", "cloudflare", "dev-server", "proxy", "diagnostics", "localhost", "mobile-testing"],
+  "author": "Lakshay Mehndiratta <lakshaymehndiratta776@gmail.com>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/lakshay-mehndiratta/Loclyn.git",
+    "directory": "packages/cli"
+  },
+  "homepage": "https://github.com/lakshay-mehndiratta/Loclyn#readme",
+  "bugs": {
+    "url": "https://github.com/lakshay-mehndiratta/Loclyn/issues"
+  },
   "type": "module",
   "bin": {
     "loclyn": "bundle/index.js"
