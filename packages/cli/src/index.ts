@@ -13,6 +13,8 @@ import {
   DiagnosticsEngine,
   LogCollector,
   HostCheckProbe,
+  findExecutable,
+  cloudflaredInstallHint,
   TunnelManager,
   detectProject,
   loadConfigFile,
@@ -272,7 +274,19 @@ function exitOnPortConflicts(
   }
 }
 
+/** Loclyn's public URL comes from cloudflared, so check it is installed
+ * before doing anything else (before any prompt or port is touched). */
+function requireCloudflared(): void {
+  if (findExecutable("cloudflared")) return;
+  console.error("✗ cloudflared was not found on your PATH.");
+  console.error("  Loclyn needs it to create the public tunnel URL.");
+  console.error(`  ${cloudflaredInstallHint()}`);
+  console.error("  Then run Loclyn again.");
+  process.exit(1);
+}
+
 async function main(): Promise<void> {
+  requireCloudflared();
   const fileConfig = loadConfigOrExit();
 
   // flags > config file > defaults

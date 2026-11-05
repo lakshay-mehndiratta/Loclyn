@@ -15,3 +15,4 @@ export * from "./routing.js";
 export * from "./request-scheme.js";
 export * from "./html-scanner.js";
 export * from "./response-scan.js";
+export * from "./executable.js";
