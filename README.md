@@ -34,7 +34,7 @@ Tunneling tools like ngrok or Cloudflare Tunnel give you a public URL for one po
 ## Prerequisites
 
 - **Node.js 20 or newer** (`node -v` to check).
-- **[`cloudflared`](https://github.com/cloudflare/cloudflared)** installed and on your `PATH`. Loclyn uses it to open a free Cloudflare quick tunnel; no Cloudflare account is needed.
+- **[`cloudflared`](https://github.com/cloudflare/cloudflared)** installed and on your `PATH`. Loclyn uses it to open a free Cloudflare quick tunnel; no Cloudflare account is needed. If cloudflared is missing, Loclyn stops at startup with an install message.
 
   ```bash
   brew install cloudflared                      # macOS
@@ -121,7 +121,7 @@ History (200 requests, 100 WebSockets, 300 log lines) lives in memory and resets
 | Check | What it tells you | Confidence |
 |---|---|---|
 | **API Connectivity** | A service isn't accepting connections on its port | High |
-| **Tunnel** | `cloudflared` is missing, exited, or the tunnel is up (with an install hint) | High |
+| **Tunnel** | Reports whether the Cloudflare tunnel is connected or has exited unexpectedly | High |
 | **HTTP Requests** | 500+ responses among a service's last 5 requests (1 = warning, 2 or more = error) | Medium |
 | **WebSocket (HMR)** | A WebSocket upgrade was accepted, refused (with the status), or the service was unreachable | High |
 | **Connectivity (IPv4/IPv6)** | The proxy's connection was refused — a common sign of a service bound only to IPv6 | Medium |
@@ -161,7 +161,7 @@ app.use(cors({ origin: "http://localhost:5173" }));
 
 ## Troubleshooting
 
-**No public URL / "Tunnel" error on the Diagnostics page.** `cloudflared` is missing or not on your `PATH`. Install it (see Prerequisites), open a new terminal and restart Loclyn.
+**"cloudflared was not found on your PATH" on startup.** Install it (see Prerequisites), open a new terminal and run Loclyn again.
 
 **"Port … is already in use" on startup.** Another process — often an earlier Loclyn — is using `4020` or `4021`. Stop it, or choose other ports with `--proxy-port` / `--dashboard-port`.
 
