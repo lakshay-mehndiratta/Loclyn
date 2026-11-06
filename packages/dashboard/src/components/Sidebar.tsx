@@ -12,6 +12,7 @@ import {
   Settings,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
+import Image from "next/image";
 
 interface NavItem {
   label: string;
@@ -36,7 +37,14 @@ export function Sidebar() {
   return (
     <nav className="sidebar">
       <div className="sidebar-brand">
-        <span className="brand-mark">◆</span>
+        <Image
+          src="/loclyn-icon.png"
+          alt="Loclyn"
+          width={48}
+          height={32}
+          className="brand-mark"
+          priority
+        />
         <span className="brand-name">Loclyn</span>
       </div>
 

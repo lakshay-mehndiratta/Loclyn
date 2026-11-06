@@ -26,14 +26,17 @@ body {
 .sidebar-brand {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   padding: 8px 12px 24px 12px;
   font-weight: 600;
   font-size: 16px;
 }
 
 .brand-mark {
-  color: #7c6cf6;
+  height: 32px;
+  width: auto;
+  object-fit: contain;
+  flex-shrink: 0;
 }
 
 .sidebar-nav {
