@@ -13,24 +13,24 @@ export function ServicesPanel() {
       {list.length === 0 ? (
         <p className="empty-state">No services reported yet.</p>
       ) : (
-        <table>
+        <table className="stack-table">
           <tbody>
             {list.map((service) => (
               <tr key={service.name}>
-                <td>
+                <td data-corner>
                   <ServiceStatusIcon status={service.status} />
                 </td>
-                <td>{service.name}</td>
+                <td data-title>{service.name}</td>
                 {service.framework && (
-                  <td>
+                  <td data-label="Framework">
                     <span className="framework-badge">
                       <FrameworkIcon framework={service.framework} />
                       {service.framework}
                     </span>
                   </td>
                 )}
-                <td>:{service.port}</td>
-                <td>{service.status}</td>
+                <td data-label="Port">:{service.port}</td>
+                <td data-label="Status">{service.status}</td>
               </tr>
             ))}
           </tbody>

@@ -130,7 +130,7 @@ export default function RequestsPage() {
           <p className="empty-state">No requests match the current filters.</p>
         ) : (
           <>
-            <table>
+            <table className="stack-table">
               <thead>
                 <tr>
                   <th>Time</th>

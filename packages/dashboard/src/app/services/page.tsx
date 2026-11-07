@@ -22,7 +22,7 @@ export default function ServicesPage() {
         {list.length === 0 ? (
           <p className="empty-state">No services reported yet.</p>
         ) : (
-          <table>
+          <table className="stack-table">
             <thead>
               <tr>
                 <th></th>
@@ -38,12 +38,12 @@ export default function ServicesPage() {
             <tbody>
               {list.map((service) => (
                 <tr key={service.name}>
-                  <td>
+                  <td data-corner>
                     <ServiceStatusIcon status={service.status} />
                   </td>
-                  <td>{service.name}</td>
-                  <td className="dim">{service.type}</td>
-                  <td>
+                  <td data-title>{service.name}</td>
+                  <td className="dim" data-label="Type">{service.type}</td>
+                  <td data-label="Framework">
                     {service.framework ? (
                       <span className="framework-badge">
                         <FrameworkIcon framework={service.framework} />
@@ -53,10 +53,10 @@ export default function ServicesPage() {
                       "—"
                     )}
                   </td>
-                  <td>:{service.port}</td>
-                  <td>{service.status}</td>
-                  <td className="dim">{service.pathPrefix ?? "default (catch-all)"}</td>
-                  <td className="dim">{formatLastChecked(service.lastCheckedAt)}</td>
+                  <td data-label="Port">:{service.port}</td>
+                  <td data-label="Status">{service.status}</td>
+                  <td className="dim" data-label="Route">{service.pathPrefix ?? "default (catch-all)"}</td>
+                  <td className="dim" data-label="Status since">{formatLastChecked(service.lastCheckedAt)}</td>
                 </tr>
               ))}
             </tbody>

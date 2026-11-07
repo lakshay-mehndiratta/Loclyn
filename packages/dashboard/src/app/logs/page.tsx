@@ -88,7 +88,7 @@ export default function LogsPage() {
           <p className="empty-state">No log entries match the current filters.</p>
         ) : (
           <>
-            <table>
+            <table className="stack-table">
               <thead>
                 <tr>
                   <th className="lg-time">Time</th>
@@ -100,10 +100,10 @@ export default function LogsPage() {
               <tbody>
                 {pageItems.map((l) => (
                   <tr key={l.id}>
-                    <td className="dim">{new Date(l.time).toLocaleTimeString()}</td>
-                    <td><LevelBadge level={l.level} /></td>
-                    <td className="dim">{l.source}</td>
-                    <td className="path-cell"><ScrollingText text={l.message} /></td>
+                    <td className="dim" data-label="Time">{new Date(l.time).toLocaleTimeString()}</td>
+                    <td data-corner><LevelBadge level={l.level} /></td>
+                    <td className="dim" data-label="Source">{l.source}</td>
+                    <td className="path-cell" data-title><ScrollingText text={l.message} /></td>
                   </tr>
                 ))}
               </tbody>

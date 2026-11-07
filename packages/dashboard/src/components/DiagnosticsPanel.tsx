@@ -14,19 +14,19 @@ export function DiagnosticsPanel() {
       {list.length === 0 ? (
         <p className="empty-state">No diagnostics reported yet.</p>
       ) : (
-        <table>
+        <table className="stack-table">
           <tbody>
             {list.map((d) => (
               <tr key={d.id + d.detail}>
-                <td className="col-diagnostic-label">
+                <td className="col-diagnostic-label" data-title>
                   <span className="diagnostic-label-cell">
                     <DiagnosticTypeIcon id={d.id} />
                     {d.label}
                   </span>
                 </td>
-                <td className="dim col-diagnostic-detail"><ScrollingText text={d.detail} /></td>
-                <td><ScrollingText text={d.message ?? ""} /></td>
-                <td>
+                <td className="dim col-diagnostic-detail" data-label="Target"><ScrollingText text={d.detail} /></td>
+                <td data-label="Detail" data-wide>{d.message ? <ScrollingText text={d.message} /> : "—"}</td>
+                <td data-corner>
                   <SeverityBadge severity={d.severity} />
                 </td>
               </tr>

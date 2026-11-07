@@ -19,7 +19,7 @@ export default function DiagnosticsPage() {
         {list.length === 0 ? (
           <p className="empty-state">No diagnostics reported yet.</p>
         ) : (
-          <table>
+          <table className="stack-table">
             <thead>
               <tr>
                 <th className="dp-label">Check</th>
@@ -33,21 +33,21 @@ export default function DiagnosticsPage() {
             <tbody>
               {list.map((d) => (
                 <tr key={d.id + d.detail}>
-                  <td className="dp-label">
+                  <td className="dp-label" data-title>
                     <span className="diagnostic-label-cell">
                       <DiagnosticTypeIcon id={d.id} />
                       {d.label}
                     </span>
                   </td>
-                  <td className="dim dp-target"><ScrollingText text={d.detail} /></td>
-                  <td className="dp-message">
+                  <td className="dim dp-target" data-label="Target"><ScrollingText text={d.detail} /></td>
+                  <td className="dp-message" data-label="Detail" data-wide>
                     {d.message ? <ScrollingText text={d.message} /> : "—"}
                   </td>
-                  <td className="dim dp-confidence">
+                  <td className="dim dp-confidence" data-label="Confidence">
                     <ScrollingText text={confidenceLabel(d.confidence)} />
                   </td>
-                  <td className="dim">{new Date(d.updatedAt).toLocaleTimeString()}</td>
-                  <td>
+                  <td className="dim" data-label="Updated">{new Date(d.updatedAt).toLocaleTimeString()}</td>
+                  <td data-corner>
                     <SeverityBadge severity={d.severity} />
                   </td>
                 </tr>

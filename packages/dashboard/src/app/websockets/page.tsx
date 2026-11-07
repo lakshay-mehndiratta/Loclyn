@@ -83,7 +83,7 @@ export default function WebSocketsPage() {
         ) : filtered.length === 0 ? (
           <p className="empty-state">No connections match this filter.</p>
         ) : (
-          <table>
+          <table className="stack-table">
             <thead>
               <tr>
                 <th>Started</th>
@@ -97,14 +97,14 @@ export default function WebSocketsPage() {
             <tbody>
               {filtered.map((c) => (
                 <tr key={c.id}>
-                  <td className="dim">{new Date(c.startedAt).toLocaleTimeString()}</td>
-                  <td className="path-cell"><ScrollingText text={c.path} /></td>
-                  <td>
+                  <td className="dim" data-label="Started">{new Date(c.startedAt).toLocaleTimeString()}</td>
+                  <td className="path-cell" data-title><ScrollingText text={c.path} /></td>
+                  <td data-label="Service">
                     <ServiceCell serviceName={c.serviceName} services={services} />
                   </td>
-                  <td><StateBadge status={c.status} /></td>
-                  <td className="dim">{durationOf(c, now)}</td>
-                  <td className="dim">
+                  <td data-corner><StateBadge status={c.status} /></td>
+                  <td className="dim" data-label="Duration">{durationOf(c, now)}</td>
+                  <td className="dim" data-label="Reason" data-wide>
                     {c.reason ? <ScrollingText text={c.reason} /> : "—"}
                   </td>
                 </tr>

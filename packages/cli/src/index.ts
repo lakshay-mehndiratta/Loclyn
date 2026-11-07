@@ -31,12 +31,18 @@ import { DashboardServer } from "@loclyn/dashboard-server";
 
 /**
  * Finds the built dashboard (a Next.js static export), or undefined if it has
- * not been built. Looks next to the CLI first (where a packaged install will
- * keep it), then at the monorepo build output.
+ * not been built.
+ *  - Published package: bundle/index.js, with the UI in ../ui
+ *  - Running from source: dist/index.js, so use the fresh dashboard build
+ *    (../../dashboard/out). The packaged ../ui copy is only a fallback there,
+ *    because after `npm run pack:cli` it can be older than your latest build.
  */
 function findDashboardUi(): string | undefined {
   const here = path.dirname(fileURLToPath(import.meta.url));
-  const candidates = [path.resolve(here, "../ui"), path.resolve(here, "../../dashboard/out")];
+  const candidates =
+    path.basename(here) === "bundle"
+      ? [path.resolve(here, "../ui")]
+      : [path.resolve(here, "../../dashboard/out"), path.resolve(here, "../ui")];
   return candidates.find((dir) => fs.existsSync(path.join(dir, "index.html")));
 }
 

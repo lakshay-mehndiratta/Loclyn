@@ -39,18 +39,18 @@ export function RequestsPanel() {
           <tbody>
             {recent.map((r) => (
               <tr key={r.id}>
-                <td className="dim">{new Date(r.time).toLocaleTimeString()}</td>
-                <td>
+                <td className="dim" data-label="Time">{new Date(r.time).toLocaleTimeString()}</td>
+                <td data-label="Method">
                   <MethodBadge method={r.method} />
                 </td>
-                <td className="path-cell"><ScrollingText text={r.path} /></td>
-                <td><StatusBadge status={r.status} /></td>
-                <td className="col-service">
+                <td className="path-cell" data-title><ScrollingText text={r.path} /></td>
+                <td data-corner><StatusBadge status={r.status} /></td>
+                <td className="col-service" data-label="Service">
                   <ServiceCell serviceName={r.serviceName} services={services} />
                 </td>
-                <td className="dim">{r.type}</td>
-                <td className="dim">{formatSize(r.sizeBytes)}</td>
-                <td className="dim">{r.durationMs === null ? "—" : `${r.durationMs}ms`}</td>
+                <td className="dim" data-label="Type">{r.type}</td>
+                <td className="dim" data-label="Size">{formatSize(r.sizeBytes)}</td>
+                <td className="dim" data-label="Duration">{r.durationMs === null ? "—" : `${r.durationMs}ms`}</td>
               </tr>
             ))}
           </tbody>
