@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import { AppShell } from "@/components/AppShell";
 import { Sidebar } from "@/components/Sidebar";
 import { Header } from "@/components/Header";
 import { LoclynDataProvider } from "@/lib/LoclynDataContext";
@@ -14,13 +15,13 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en">
       <body>
         <LoclynDataProvider>
-          <div className="app-shell">
+          <AppShell>
             <Sidebar />
             <div className="app-main">
               <Header />
               <main className="page-content">{children}</main>
             </div>
-          </div>
+          </AppShell>
         </LoclynDataProvider>
       </body>
     </html>

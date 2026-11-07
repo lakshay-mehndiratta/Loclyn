@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import Image from "next/image";
+import { useMobileNav } from "./AppShell";
 
 interface NavItem {
   label: string;
@@ -33,20 +34,21 @@ const NAV_ITEMS: NavItem[] = [
 
 export function Sidebar() {
   const pathname = usePathname();
+  const { close } = useMobileNav();
 
   return (
     <nav className="sidebar">
-      <div className="sidebar-brand">
+      <Link href="/" className="sidebar-brand" aria-label="Loclyn – go to Overview" onClick={close}>
         <Image
           src="/loclyn-icon.png"
-          alt="Loclyn"
+          alt=""
           width={48}
           height={32}
           className="brand-mark"
           priority
         />
         <span className="brand-name">Loclyn</span>
-      </div>
+      </Link>
 
       <ul className="sidebar-nav">
         {NAV_ITEMS.map((item) => {
@@ -67,7 +69,7 @@ export function Sidebar() {
 
           return (
             <li key={item.label} className={`nav-item ${isActive ? "nav-item-active" : ""}`}>
-              <Link href={item.href} className="nav-item-content">
+              <Link href={item.href} className="nav-item-content" onClick={close}>
                 <Icon size={16} strokeWidth={1.75} />
                 <span>{item.label}</span>
               </Link>

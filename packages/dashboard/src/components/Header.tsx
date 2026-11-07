@@ -2,6 +2,7 @@
 
 import { usePathname } from "next/navigation";
 import { useLoclynData } from "@/lib/LoclynDataContext";
+import { MenuButton } from "./MenuButton";
 
 const PAGE_TITLES: Record<string, string> = {
   "/": "Overview",
@@ -20,7 +21,10 @@ export function Header() {
 
   return (
     <header className="header">
+      <div className="header-left">
+        <MenuButton />
       <div className="header-title">{title}</div>
+      </div>
       <div className="header-status">
         <span className={`status-dot ${wsConnected ? "status-ok" : "status-error"}`} />
         <span>{wsConnected ? "Connected" : "Disconnected"}</span>
