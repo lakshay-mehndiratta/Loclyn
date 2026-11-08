@@ -1,6 +1,11 @@
 # Loclyn
 
+[![npm version](https://img.shields.io/npm/v/loclyn)](https://www.npmjs.com/package/loclyn)
+[![license: MIT](https://img.shields.io/npm/l/loclyn)](https://www.npmjs.com/package/loclyn)
+
 Loclyn exposes your local development stack — a frontend, a backend, or both — to any device through a single public URL, and tells you **why** something broke when it does. It's built for the recurring pain of testing a local web app on a real phone: mismatched ports, CORS errors, dev servers that reject the tunnel's hostname, broken HMR WebSockets, and redirects that point back at `localhost`.
+
+**Available on npm:** [npmjs.com/package/loclyn](https://www.npmjs.com/package/loclyn) — nothing to clone or build, just run `npx loclyn`.
 
 ```
 Phone ──▶ Cloudflare Tunnel ──▶ Loclyn Proxy ──▶ your local frontend
@@ -10,13 +15,20 @@ Phone ──▶ Cloudflare Tunnel ──▶ Loclyn Proxy ──▶ your local fr
 
 ## Quick start
 
+Loclyn is published on npm. No global installation is required — run it directly with npx from your project folder:
+
 ```bash
-# 1. Start your own dev server(s) as usual, e.g. npm run dev
-# 2. In another terminal, from your project folder:
 npx loclyn --frontend 3000
 ```
 
-Loclyn prints a public `https://….trycloudflare.com` URL — open it on your phone. Open **http://localhost:4021** on your computer for the live dashboard. The dashboard is served by Loclyn itself, so there is no second process to start.
+1. Start your own dev server(s) as usual, e.g. `npm run dev`.
+2. In another terminal, run `npx loclyn --frontend <port>` (add `--backend <port>` if your API runs separately).
+3. Open the public `https://….trycloudflare.com` URL Loclyn prints on your phone.
+4. Open **http://localhost:4021** on your computer for the live dashboard. The dashboard is served by Loclyn itself, so there is no second process to start.
+
+You need Node.js 20+ and [`cloudflared`](https://github.com/cloudflare/cloudflared) on your `PATH` (see [Prerequisites](#prerequisites)).
+
+Prefer a permanent command? `npm install -g loclyn` puts `loclyn` on your `PATH`; every `npx loclyn` example below works as plain `loclyn`.
 
 ## Why
 
@@ -28,6 +40,7 @@ Tunneling tools like ngrok or Cloudflare Tunnel give you a public URL for one po
 - **HTTP and WebSocket proxying** — HMR and other WebSockets go through the same routing as normal requests. Loclyn tracks the real handshake outcome (accepted, refused, or unreachable).
 - **Diagnostics that explain the cause** — each finding names the affected service and the fix, and is labeled **high** or **medium** confidence (see below).
 - **Live dashboard** — Overview, Services, Requests, WebSockets, Diagnostics, Logs and a read-only Settings page, updating in real time and surviving a page refresh. Served by Loclyn on the dashboard port.
+- **Zero install** — published on npm; `npx loclyn` is all you need.
 - **Flexible setup** — CLI flags, a `.loclyn.json` config file, or auto-detection from your project.
 - **Clean lifecycle** — graceful shutdown on `Ctrl+C`, and clear errors when a port is in use or `cloudflared` is missing.
 
@@ -154,9 +167,13 @@ module.exports = { allowedDevOrigins: ["*.trycloudflare.com"] };
 ```
 
 ```js
-// Express — build redirect URLs from the real scheme and host, and enable CORS for your origin
+// Express — trust the proxy when generating redirects or secure URLs
 app.set("trust proxy", true);
-app.use(cors({ origin: "http://localhost:5173" }));
+
+// Only needed if your frontend and API use different origins.
+// Allow the exact origin that the phone's browser uses, for example:
+// https://your-project.trycloudflare.com
+app.use(cors({ origin: "https://your-project.trycloudflare.com" }));
 ```
 
 ## Troubleshooting
@@ -202,6 +219,8 @@ Everything in `core` communicates through one typed event bus (`LoclynEventBus`)
 The dashboard server keeps a bounded in-memory snapshot (recent requests, WebSockets, logs, latest settings) and replays it to any client that connects, which is why a page refresh keeps its state. The published `loclyn` package bundles `core` and `dashboard-server` into the CLI and ships the built dashboard alongside it.
 
 ## Development
+
+This section is for working on Loclyn itself. To just use it, see [Quick start](#quick-start).
 
 ```bash
 git clone https://github.com/lakshay-mehndiratta/Loclyn.git
